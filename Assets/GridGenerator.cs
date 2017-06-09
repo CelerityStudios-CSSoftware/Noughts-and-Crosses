@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class GridGenerator : MonoBehaviour {
-    public Transform EmptyGridCell;
+    public ChangeMaterialOnClick EmptyGridCell;
+    public PlayerColor playerColor;
     public uint width;
     public uint height;
 
@@ -11,6 +11,7 @@ public class GridGenerator : MonoBehaviour {
         for (uint x = 0; x < width; x++) {
             for (uint y = 0; y < height; y++) {
                 Instantiate(EmptyGridCell, new Vector3(x, y, transform.position.z), Quaternion.identity, transform);
+                EmptyGridCell.playerColor = playerColor;
             }
         }
 	}
