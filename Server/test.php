@@ -17,10 +17,10 @@
 	}
 	else
 	{
-		$msg = 'Testing 1 2 3.';
+		$msg = 'Testing 1 2 3.\n';
 		socket_write($socket, $msg, strlen($msg));
 		
-		$msg = 'Shutdown';
+		$msg = 'Shutdown\n';
 		socket_write($socket, $msg, strlen($msg));
 	}
 	
