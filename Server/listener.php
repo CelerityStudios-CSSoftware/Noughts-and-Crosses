@@ -1,28 +1,20 @@
 <?php
-	session_start();
+	require_once 'game.php';
 	listener::start();
 	
 	class listener
 	{
-		private const ip_address = '127.0.0.1';
-		private const port = 1413;
+		const ip_address = '127.0.0.1';
+		const port = 1413;
 		
 		private static $socket;
 		private static $players = [];
-		private static $ch;
 		
 		public static function start()
 		{
 			error_reporting(E_ALL);
 			set_time_limit(0);
 			ob_implicit_flush();
-			
-			$_SESSION['players'] = [];
-			
-			self::$ch = curl_init();
-			curl_setopt(self::$ch, CURLOPT_URL, 'game.php');
-			curl_setopt(self::$ch, CURLOPT_RETURNTRANSFER, 1);
-			curl_setopt(self::$ch, CURLOPT_TIMEOUT, 1);
 			
 			try
 			{
@@ -85,11 +77,13 @@
 						}
 						else
 						{
-							$_SESSION['players'][0] = self::$players[0];
-							$_SESSION['players'][1] = self::$players[1];
-							self::$players = [];
+							$game = new game();
+							$game->players[0] = self::$players[0];
+							$game->players[1] = self::$players[1];
+							$game->start();
 							
-							curl_exec(self::$ch);
+							self::$players = [];
+							self::listen();
 						}
 					}
 				}

@@ -1,83 +1,75 @@
 <?php
-	session_start();
-	game::start();
-	
-	class game
+	class game extends Thread
 	{
-		private static $players = [];
-		private static $turn = 0;
-		private static $board = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+		public $players = [];
+		private $turn = 0;
+		private $board = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 		
-		public static function start()
+		public function run()
 		{
 			set_time_limit(10);
-			
-			array_push(self::$players, $_SESSION['players'][0]);
-			array_push(self::$players, $_SESSION['players'][1]);
-			$_SESSION['players'] = [];
-			
-			self::play();
+			$this->play();
 		}
 		
-		private static function play()
+		private function play()
 		{
 			while (true)
 			{
 				set_time_limit(60);
-				self::player_write(self::$turn, "Server: Your turn.\n");
-				$move = self::player_read(self::$turn, 256);
-				self::validate_move($move);
+				$this->player_write($this->turn, "Server: Your turn.\n");
+				$move = $this->player_read($this->turn, 256);
+				$this->validate_move($move);
 				
-				if (0 === self::$turn)
+				if (0 === $this->turn)
 				{
-					self::$turn = 1;
+					$this->turn = 1;
 				}
 				else
 				{
-					self::$turn = 0;
+					$this->turn = 0;
 				}
 			}
 		}
 		
-		private static function validate_move($move)
+		private function validate_move($move)
 		{
 			if (true === ctype_digit($move) && 2 === strlen($move))
 			{
-				$row = substr($move, 0, 1);
-				$col = substr($move, 1, 1);
+				$row = (int)substr($move, 0, 1);
+				$col = (int)substr($move, 1, 1);
 				
 				if (0 <= $row && 2 >= $row)
 				{
 					if (0 <= $col && 2 >= $col)
 					{
-						if (0 === self::$board[$row][$col])
+						if (0 === $this->board[$row][$col])
 						{
-							self::$board[$row][$col] = self::$turn + 1;
+							$this->board[$row][$col] = $this->turn + 1;
 							
-							self::player_write(0, "Server: Move $move\n");
-							self::player_write(1, "Server: Move $move\n");
+							$this->player_write(0, "Server: Move $move\n");
+							$this->player_write(1, "Server: Move $move\n");
 						}
 					}
 				}
 			}
 		}
 		
-		private static function player_read($player, $size)
+		private function player_read($player, $size)
 		{
-			if (false === ($data = socket_read(self::$players[$player], $size, PHP_NORMAL_READ)))
+			if (false === ($data = socket_read($this->players[$player], $size, PHP_NORMAL_READ)))
 			{
-				array_splice(self::$players, $player, 1);
+				array_splice($this->players, $player, 1);
 				return false;
 			}
 			
 			return $data;
 		}
 		
-		private static function player_write($player, $data)
+		private function player_write($player, $data)
 		{
-			if (false === socket_write(self::$players[$player], $data, strlen($data)))
+			if (false === socket_write($this->players[$player], $data, strlen($data)))
 			{
-				array_splice(self::$players, $player, 1);
+				array_splice($this->players, $player, 1);
 				return false;
 			}
 			
