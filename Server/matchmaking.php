@@ -16,7 +16,7 @@
 		
 		public static function start()
 		{
-			error_reporting(E_ALL);
+			error_reporting(0);
 			set_time_limit(0);
 			ob_implicit_flush();
 			
@@ -41,6 +41,7 @@
 		{
 			while (true)
 			{
+				echo 'NO';
 				// Add the connected player to next match group.
 				array_push(self::$player_sockets, socket_accept(self::$socket));
 				
@@ -73,7 +74,7 @@
 							$match->start();
 							
 							self::$player_sockets = [];
-							self::listen();
+							echo 'hello';
 						}
 					}
 				}
