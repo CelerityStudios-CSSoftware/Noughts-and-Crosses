@@ -73,7 +73,7 @@
 							$match->start();
 							
 							self::$player_sockets = [];
-							return;
+							self::listen();
 						}
 					}
 				}
