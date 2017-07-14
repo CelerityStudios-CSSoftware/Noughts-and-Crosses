@@ -14,6 +14,8 @@
 		// Contains players for next match.
 		private static $player_sockets = [];
 		
+		private static $matches = [];
+		
 		public static function start()
 		{
 			error_reporting(0);
@@ -41,7 +43,6 @@
 		{
 			while (true)
 			{
-				echo 'NO';
 				// Add the connected player to next match group.
 				array_push(self::$player_sockets, socket_accept(self::$socket));
 				
@@ -68,13 +69,12 @@
 						}
 						else
 						{
-							$match = new match();
-							$match->player_sockets[0] = self::$player_sockets[0];
-							$match->player_sockets[1] = self::$player_sockets[1];
-							$match->start();
+							self::$matches[] = new match();
+							end(self::$matches)->player_sockets[0] = self::$player_sockets[0];
+							end(self::$matches)->player_sockets[1] = self::$player_sockets[1];
+							end(self::$matches)->start();
 							
 							self::$player_sockets = [];
-							echo 'hello';
 						}
 					}
 				}
