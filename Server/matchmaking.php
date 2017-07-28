@@ -1,8 +1,10 @@
 <?php
 	require_once 'match.php';
 	
-	$match = null;
-	matchmaking::start();
+	$matchmaking = new matchmaking();
+	$match = new match();
+	
+	$matchmaking->start();
 	
 	class matchmaking
 	{
@@ -18,34 +20,31 @@
 		 * Error Code 5: Failed to fork process.
 		 */
 		
-		private static $ip_address = '127.0.0.1';
+		private $ip_address = '132.148.22.175';
+		private $port = 1413;
 		
-		private static $port = 1413;
-		
-		private static $socket;
+		private $socket;
 		// Max players allowed per match.
-		private static $player_limit = 2;
+		private $player_limit = 2;
 		// Contains player sockets for next match.
-		private static $player_sockets = [];
+		private $player_sockets = [];
 		
-		private static $matchmaking = true;
-		
-		public static function start()
+		public function start()
 		{
 			error_reporting(E_ALL);
-			set_time_limit(256);
+			set_time_limit(0);
 			ob_implicit_flush();
 			
 			// Setup matchmaking socket listener.
-			if (false === (self::$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)))
+			if (false === ($this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)))
 			{
 				die('error:1');
 			}
-			elseif (false === socket_bind(self::$socket, self::$ip_address, self::$port))
+			elseif (false === socket_bind($this->socket, $this->ip_address, $this->port))
 			{
 				die('error:2');
 			}
-			elseif (false === socket_listen(self::$socket, 5))
+			elseif (false === socket_listen($this->socket, 1))
 			{
 				die('error:3');
 			}
@@ -53,88 +52,62 @@
 			self::listen();
 		}
 		
-		private static function listen()
+		private function listen()
 		{
-			while (true === self::$matchmaking)
+			while (true)
 			{
 				// Add the connected player to next match group.
-				array_push(self::$player_sockets, socket_accept(self::$socket));
+				array_push($this->player_sockets, socket_accept($this->socket));
 				
 				self::matchmake();
 			}
 		}
 		
-		private static function matchmake()
+		private function matchmake()
 		{
-			$player_count = count(self::$player_sockets);
+			$player_count = count($this->player_sockets);
 			
 			// Check if match still needs more players.
-			if ($player_count < self::$player_limit)
+			if ($player_count < $this->player_limit)
 			{
 				// Inform others of joined player.
-				self::socket_write_all('pf:' . $player_count . ':' . self::$player_limit . "\n");
+				self::socket_write_all('pf:' . $player_count . ':' . $this->player_limit . "\n");
 			}
-			elseif (count(self::$player_sockets) === self::$player_limit)
+			elseif (count($this->player_sockets) === $this->player_limit)
 			{
-				$pid = pcntl_fork();
+				socket_close($this->socket);
 				
-				if (-1 === $pid)
-				{
-					self::socket_write_all('error:5' . "\n");
-					self::reboot();
-				}
-				elseif (1 === $pid)
-				{
-					self::$player_sockets = [];
-				}
-				else
-				{
-					self::$socket = null;
-					self::$matchmaking = false;
-					
-					global $match;
-					$match = new match();
-					$match->player_sockets = self::$player_sockets;
-					
-					self::$player_sockets = [];
-				}
+				global $match;
+				$match->player_sockets = $this->player_sockets;
+				$this->player_sockets = [];
+				$match->start();
 			}
 		}
 		
-		private static function reboot()
-		{
-			// Close all player sockets.
-			foreach (self::$player_sockets as &$socket)
-			{
-				socket_close($socket);
-			}
-			self::$player_sockets = [];
-		}
-		
-		private static function socket_write($player_id, $data)
+		private function socket_write($player_id, $data)
 		{
 			// Send data to given socket and check if successful.
-			if (false === socket_write(self::$player_sockets[$player_id], $data, strlen($data)))
+			if (false === socket_write($this->player_sockets[$player_id], $data, strlen($data)))
 			{
 				// Remove disconnected player from matchmaking.
-				array_splice(self::$player_sockets, $player_id, 1);
+				array_splice($this->player_sockets, $player_id, 1);
 				return false;
 			}
 			return true;
 		}
 		
-		private static function socket_write_all($data)
+		private function socket_write_all($data)
 		{
 			$players_disconnected = 0;
 			do
 			{
-				$player_count = count(self::$player_sockets);
+				$player_count = count($this->player_sockets);
 				
 				// Check if "do" is in 2nd loop.
 				if (0 < $players_disconnected)
 				{
 					// Inform other users of disconnected player.
-					$data = 'pd:' . $player_count . ':' . self::$player_limit . "\n";
+					$data = 'pd:' . $player_count . ':' . $this->player_limit . "\n";
 					
 					// Prevent "do" from looping again.
 					$players_disconnected = 0;
@@ -155,9 +128,4 @@
 			}
 			while (0 < $players_disconnected);
 		}
-	}
-	
-	if (null !== $match)
-	{
-		$match->start();
 	}
