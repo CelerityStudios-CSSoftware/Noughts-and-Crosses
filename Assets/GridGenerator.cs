@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 
 public class GridGenerator : MonoBehaviour {
-    public ChangeMaterialOnClick EmptyGridCell;
+    public ChangeMaterialOnClick emptyGridCell;
+    public ConnectToServer server;
     public PlayerColor playerColor;
+    public PlayerColor enemyColor;
     public uint width;
     public uint height;
 
@@ -10,8 +12,14 @@ public class GridGenerator : MonoBehaviour {
 	void Start () {
         for (uint x = 0; x < width; x++) {
             for (uint y = 0; y < height; y++) {
-                Instantiate(EmptyGridCell, new Vector3(x, y, transform.position.z), Quaternion.identity, transform);
-                EmptyGridCell.playerColor = playerColor;
+                var cell = Instantiate(emptyGridCell, new Vector3(x, y, transform.position.z), Quaternion.identity, transform) as ChangeMaterialOnClick;
+                cell.playerColor = playerColor;
+                cell.enemyColor = enemyColor;
+                cell.server = server;
+                cell.x = x;
+                cell.y = y;
+                cell.gameObject.SetActive(true);
+                cell.gameObject.name = "" + x + y;
             }
         }
 	}

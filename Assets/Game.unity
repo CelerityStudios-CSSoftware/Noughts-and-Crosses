@@ -90,6 +90,12 @@ NavMeshSettings:
     cellSize: 0.16666667
     manualCellSize: 0
   m_NavMeshData: {fileID: 0}
+--- !u!114 &124958775 stripped
+MonoBehaviour:
+  m_PrefabParentObject: {fileID: 114000010180778196, guid: eb82f6de198859742a9475267ab7ac70,
+    type: 2}
+  m_PrefabInternal: {fileID: 225269328}
+  m_Script: {fileID: 11500000, guid: f4720474e9c64c843b827e12ae268c14, type: 3}
 --- !u!1001 &225269328
 Prefab:
   m_ObjectHideFlags: 0
@@ -133,10 +139,20 @@ Prefab:
         type: 2}
       propertyPath: playerColor
       value: 
-      objectReference: {fileID: 331089759}
+      objectReference: {fileID: 0}
     - target: {fileID: 1000013649685202, guid: eb82f6de198859742a9475267ab7ac70, type: 2}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 114000010180778196, guid: eb82f6de198859742a9475267ab7ac70,
+        type: 2}
+      propertyPath: enemyColor
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 114000010180778196, guid: eb82f6de198859742a9475267ab7ac70,
+        type: 2}
+      propertyPath: server
+      value: 
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: eb82f6de198859742a9475267ab7ac70, type: 2}
@@ -261,6 +277,89 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
+--- !u!1 &644612293
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 4
+  m_Component:
+  - 4: {fileID: 644612295}
+  - 114: {fileID: 644612294}
+  m_Layer: 0
+  m_Name: EnemyData
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &644612294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 644612293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0189afc9fb0c8b945a61f3a3eead8342, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  color: {fileID: 2100000, guid: 5e0e1b3bbe86c7945bc3b314fb8b8138, type: 2}
+--- !u!4 &644612295
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 644612293}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 8
+--- !u!1 &1100106582
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 4
+  m_Component:
+  - 4: {fileID: 1100106584}
+  - 114: {fileID: 1100106583}
+  m_Layer: 0
+  m_Name: Server
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1100106583
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1100106582}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a87ce8e62dcffc941be3d7fa151f3f01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ip: 127.0.0.1
+  port: 1413
+--- !u!4 &1100106584
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1100106582}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
 --- !u!1 &1349932434
 GameObject:
   m_ObjectHideFlags: 0
@@ -430,9 +529,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d225ac0232703dd4e9638e1207fe2243, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  EmptyGridCell: {fileID: 114000010180778196, guid: eb82f6de198859742a9475267ab7ac70,
-    type: 2}
+  emptyGridCell: {fileID: 124958775}
+  server: {fileID: 1100106583}
   playerColor: {fileID: 331089759}
+  enemyColor: {fileID: 644612294}
   width: 3
   height: 3
 --- !u!4 &1706631502
@@ -530,7 +630,7 @@ Transform:
   m_GameObject: {fileID: 2042608892}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1, y: 1, z: -5}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 270}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_Children: []
   m_Father: {fileID: 0}
