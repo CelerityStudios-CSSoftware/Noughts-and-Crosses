@@ -5,6 +5,7 @@
 	$matchmaking = new matchmaking();
 	$match = new match();
 	
+	sec_database::connect();
 	$matchmaking->start();
 	
 	class matchmaking
