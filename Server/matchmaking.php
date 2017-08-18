@@ -1,5 +1,6 @@
 <?php
 	require_once 'match.php';
+	require_once 'sec_database.php';
 	
 	$matchmaking = new matchmaking();
 	$match = new match();
@@ -18,6 +19,8 @@
 		 * Error Code 3: Failed to start listening socket.
 		 *
 		 * Error Code 5: Failed to fork process.
+		 *
+		 * A:1 - Player joined matchmaking.
 		 */
 		
 		private $ip_address = '132.148.22.175';
@@ -31,7 +34,7 @@
 		
 		public function start()
 		{
-			error_reporting(E_ALL);
+			error_reporting(0);
 			set_time_limit(0);
 			ob_implicit_flush();
 			
@@ -58,6 +61,7 @@
 			{
 				// Add the connected player to next match group.
 				array_push($this->player_sockets, socket_accept($this->socket));
+				sec_database::log_user_action(end($this->player_sockets), 'A:1');
 				
 				self::matchmake();
 			}

@@ -7,6 +7,8 @@
 		 * of the player's socket in the player_sockets var.
 		 *
 		 * Error Code 4: A player has disconnected.
+		 *
+		 * E:BM - Bad Move.
 		 */
 		
 		public $player_sockets = [];
@@ -27,11 +29,11 @@
 			$this->grid_size[0] = count($this->game_board);
 			$this->grid_size[1] = count($this->game_board[0]);
 			
+			set_time_limit(60);
+			
 			// Main match loop.
 			while (true)
 			{
-				set_time_limit(60);
-				
 				$this->socket_write($this->player_turn, ('turn:' . $this->player_turn . "\n"));
 				$move = $this->socket_read($this->player_turn, 32);
 				$this->validate_player_move($move);
@@ -68,6 +70,8 @@
 						// Check if another player already took the slot.
 						if (-1 === $this->game_board[$move[0]][$move[1]])
 						{
+							set_time_limit(60);
+							
 							// Set the selected slot to the player's id.
 							$this->game_board[$move[0]][$move[1]] = $this->player_turn;
 							
@@ -88,6 +92,7 @@
 								$this->player_turn = 0;
 							}
 							
+							set_time_limit(60);
 							return;
 						}
 					}
@@ -302,6 +307,7 @@
 				$this->end_match();
 			}
 			
+			sec_database::log_user_action($this->player_sockets[$player_id], $result);
 			return $result;
 		}
 	}
