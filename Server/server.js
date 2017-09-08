@@ -42,9 +42,9 @@ var model = {
             
             startGame: 's',
             
-            playerTurn: 't',
-            
             playerMoved: 'm',
+            
+            playerTurn: 't',
             
             playerTimedOut: 'to',
             
@@ -101,7 +101,7 @@ var controller = {
         // Handle server error.
         onError: function (error) {
             'use strict';
-            console.error('Error: ', error);
+            console.error(error);
         },
 
         // Handle socket when new player connects.
@@ -111,9 +111,9 @@ var controller = {
                 playerCount = controller.games[newGame].playerSockets.length + 1;
 
             // Add socket event handlers.
-            socket.on('error', controller.games[newGame].onError);
-            socket.on('data', controller.games[newGame].onData);
-            socket.on('close', controller.games[newGame].onClose);
+            socket.on('error', controller.games[newGame].onError.bind(controller.games[newGame]));
+            socket.on('data', controller.games[newGame].onData.bind(controller.games[newGame]));
+            socket.on('close', controller.games[newGame].onClose.bind(controller.games[newGame]));
 
             // Configure socket.
             socket.setEncoding(model.socket.encoding);
@@ -141,14 +141,22 @@ var controller = {
     // Game instance constructor.
     game: function () {
         'use strict';
+        // Whether the game is finding players.
         this.matchmaking = true;
         
+        // Contains game's player sockets.
         this.playerSockets = [];
         
+        // Zero based index of current player turn.
         this.playerTurn = 0;
         
+        // Zero based index of passed turns.
         this.turnsPassed = 0;
         
+        // Contains the timeout object.
+        this.timeout = undefined;
+        
+        // Contains the game board state.
         this.gameBoard = [
             [-1, -1, -1],
             [-1, -1, -1],
@@ -170,7 +178,7 @@ var controller = {
             // Start listening for player move.
             this.playerSockets[0].resume();
             // Set player move timeout.
-            setTimeout(this.onTimeout, 60000);
+            this.timeout = setTimeout(this.onTimeout.bind(this), model.socket.timeout);
         };
         
         // Validate the current player's move.
@@ -208,8 +216,10 @@ var controller = {
                                 
                                 // Inform players of next turn.
                                 this.socketWriteAll(model.socket.codes.playerTurn + ':' + this.playerTurn);
+                                
                                 // Set player move timeout.
-                                setTimeout(this.onTimeout, 60000);
+                                clearTimeout(this.timeout);
+                                this.timeout = setTimeout(this.onTimeout.bind(this), model.socket.timeout);
                                 
                                 return;
                             }
@@ -239,8 +249,8 @@ var controller = {
 					}
 				}
 			}
-			if (move[1] < (this.model.game.gridSize[0] - 1)) {
-				for (i = (move[1] + 1); i < this.model.game.gridSize[0]; i += 1) {
+			if (move[1] < (model.game.gridSize[0] - 1)) {
+				for (i = (move[1] + 1); i < model.game.gridSize[0]; i += 1) {
 					if (this.playerTurn === this.gameBoard[i][move[2]]) {
 						slotCount += 1;
 					} else {
@@ -267,8 +277,8 @@ var controller = {
 					}
 				}
 			}
-			if (move[2] < (this.model.game.gridSize[1] - 1)) {
-				for (i = (move[2] + 1); i < this.model.game.gridSize[1]; i += 1) {
+			if (move[2] < (model.game.gridSize[1] - 1)) {
+				for (i = (move[2] + 1); i < model.game.gridSize[1]; i += 1) {
 					if (this.playerTurn === this.gameBoard[move[1]][i]) {
 						slotCount += 1;
 					} else {
@@ -282,8 +292,8 @@ var controller = {
 			}
 			
 			slotCount = 1;
-			if (0 < move[1] && move[2] < (this.model.game.gridSize[1] - 1)) {
-				for (i = (move[1] - 1), x = (move[2] + 1); i > -1 && x < this.model.game.gridSize[1]; i -= 1, x += 1) {
+			if (0 < move[1] && move[2] < (model.game.gridSize[1] - 1)) {
+				for (i = (move[1] - 1), x = (move[2] + 1); i > -1 && x < model.game.gridSize[1]; i -= 1, x += 1) {
 					if (this.playerTurn === this.gameBoard[i][x]) {
 						slotCount += 1;
 					} else {
@@ -295,8 +305,8 @@ var controller = {
 					}
 				}
 			}
-			if (move[1] < (this.model.game.gridSize[0] - 1) && 0 < move[2]) {
-				for (i = (move[1] + 1), x = (move[2] - 1); i < this.model.game.gridSize[0] && x > -1; i += 1, x -= 1) {
+			if (move[1] < (model.game.gridSize[0] - 1) && 0 < move[2]) {
+				for (i = (move[1] + 1), x = (move[2] - 1); i < model.game.gridSize[0] && x > -1; i += 1, x -= 1) {
 					if (this.playerTurn === this.gameBoard[i][x]) {
 						slotCount += 1;
 					} else {
@@ -323,8 +333,8 @@ var controller = {
 					}
 				}
 			}
-			if (move[1] < (this.model.game.gridSize[0] - 1) && move[2] < (this.model.game.gridSize[1] - 1)) {
-				for (i = (move[1] + 1), x = (move[2] + 1); i < this.model.game.gridSize[0] && x < this.model.game.gridSize[1]; i += 1, x += 1) {
+			if (move[1] < (model.game.gridSize[0] - 1) && move[2] < (model.game.gridSize[1] - 1)) {
+				for (i = (move[1] + 1), x = (move[2] + 1); i < model.game.gridSize[0] && x < model.game.gridSize[1]; i += 1, x += 1) {
 					if (this.playerTurn === this.gameBoard[i][x]) {
 						slotCount += 1;
 					} else {
@@ -341,6 +351,9 @@ var controller = {
         // Close sockets and end game.
         this.endGame = function () {
             var i;
+            
+            // Remove socket onClose event handler.
+            this.onClose = function () {};
             
             // Close all player sockets.
             for (i = 0; i < this.playerSockets.length; i += 1) {
@@ -359,6 +372,7 @@ var controller = {
         // Send data to all players.
         this.socketWriteAll = function (data) {
             var i;
+            
             for (i = 0; i < this.playerSockets.length; i += 1) {
                 this.playerSockets[i].write(data);
             }
@@ -366,7 +380,7 @@ var controller = {
         
         // Handle socket error.
         this.onError = function (error) {
-            console.error('Error: ', error);
+            console.error(error);
         };
 
         // Handle incoming player data.
@@ -394,7 +408,7 @@ var controller = {
             if (true === this.matchmaking) {
                 var i,
                     playerCount = this.playerSockets.length;
-
+                
                 // Find and remove dead player sockets.
                 for (i = 0; i < playerCount; i += 1) {
                     if (this.playerSockets[i] === undefined) {
