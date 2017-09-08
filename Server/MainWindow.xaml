@@ -1,0 +1,59 @@
+﻿<Window x:Class="Noguhts_and_Crosses.MainWindow"
+		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:local="clr-namespace:Noguhts_and_Crosses"
+		mc:Ignorable="d"
+		Title="Noughts and Crosses - Multiplayer"
+		Width="500"
+		Height="500"
+		WindowStyle="ToolWindow"
+		WindowState="Normal"
+		WindowStartupLocation="CenterScreen">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition />
+			<RowDefinition />
+			<RowDefinition />
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition />
+			<ColumnDefinition />
+			<ColumnDefinition />
+		</Grid.ColumnDefinitions>
+
+		<Button Name="GameGridTL"
+				Click="GameGridTL_Click" />
+		<Button Name="GameGridTC"
+				Grid.Column="1"
+				Click="GameGridTC_Click" />
+		<Button Name="GameGridTR"
+				Grid.Column="2"
+				Click="GameGridTR_Click" />
+
+		<Button Name="GameGridCL"
+				Grid.Row="1"
+				Click="GameGridCL_Click" />
+		<Button Name="GameGridCC"
+				Grid.Row="1"
+				Grid.Column="1"
+				Click="GameGridCC_Click" />
+		<Button Name="GameGridCR"
+				Grid.Row="1"
+				Grid.Column="2"
+				Click="GameGridCR_Click" />
+
+		<Button Name="GameGridBL"
+				Grid.Row="2"
+				Click="GameGridBL_Click" />
+		<Button Name="GameGridBC"
+				Grid.Row="2"
+				Grid.Column="1"
+				Click="GameGridBC_Click" />
+		<Button Name="GameGridBR"
+				Grid.Row="2"
+				Grid.Column="2"
+				Click="GameGridBR_Click" />
+	</Grid>
+</Window>
