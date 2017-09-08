@@ -366,7 +366,7 @@ var controller = {
         
         // Send data to a specific player socket by array index.
         this.socketWrite = function (socketIndex, data) {
-            this.playerSockets[socketIndex].write(data);
+            this.playerSockets[socketIndex].write(data + '\n');
         };
         
         // Send data to all players.
@@ -374,7 +374,7 @@ var controller = {
             var i;
             
             for (i = 0; i < this.playerSockets.length; i += 1) {
-                this.playerSockets[i].write(data);
+                this.playerSockets[i].write(data + '\n');
             }
         };
         
