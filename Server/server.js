@@ -10,58 +10,38 @@ var model = {
     // Vars used in the server controller.
     server: {
         allowHalfOpen: false,
-        
         pauseOnConnect: true,
-        
         maxConnections: 5000,
-        
         port: 12345,
-        
         host: 'localhost',
-        
         backlog: 50,
-        
         exclusive: true
     },
-    
+
     // Vars used for socket communication.
     socket: {
         encoding: 'utf8',
-        
         keepAlive: false,
-        
         keepAliveInitialDelay: 0,
-        
         noDelay: true,
-        
         timeout: 60000,
-        
         // Shorthands for game events.
         codes: {
             playerFound: 'f',
-            
             startGame: 's',
-            
             playerMoved: 'm',
-            
             playerTurn: 't',
-            
             playerTimedOut: 'to',
-            
             playerLeftInGame: 'pl',
-            
             playerWon: 'w'
         }
     },
-    
+
     // Vars used in the game controller.
     game: {
         playersPerGame: 2,
-        
         slotsToWin: 3,
-        
         turnsToWin: 5,
-        
         gridSize: [3, 3]
     }
 };
@@ -75,20 +55,21 @@ var controller = {
             allowHalfOpen: model.server.allowHalfOpen,
             pauseOnConnect: model.server.pauseOnConnect
         }),
-        
+
         // Configure and start server.
         configure: function () {
             'use strict';
             // Create first game instance.
             controller.games.push(new controller.game());
-            
+
             // Limit the amount of connections to the server.
             controller.server.base.maxConnections = model.server.maxConnections;
-            
+
             // Add server event handlers.
             controller.server.base.on('error', controller.server.onError);
             controller.server.base.on('connection', controller.server.onConnection);
-            
+
+            console.log("Listening from %s on port %d...", model.server.host, model.server.port);
             // Create port listener.
             controller.server.base.listen({
                 port: model.server.port,
@@ -97,7 +78,7 @@ var controller = {
                 exclusive: model.server.exclusive
             });
         },
-        
+
         // Handle server error.
         onError: function (error) {
             'use strict';
@@ -107,6 +88,7 @@ var controller = {
         // Handle socket when new player connects.
         onConnection: function (socket) {
             'use strict';
+            console.log("Player connected from %s", socket.address().address);
             var newGame = controller.games.length - 1,
                 playerCount = controller.games[newGame].playerSockets.length + 1;
 
@@ -137,50 +119,50 @@ var controller = {
             }
         }
     },
-    
+
     // Game instance constructor.
     game: function () {
         'use strict';
         // Whether the game is finding players.
         this.matchmaking = true;
-        
+
         // Contains game's player sockets.
         this.playerSockets = [];
-        
+
         // Zero based index of current player turn.
         this.playerTurn = 0;
-        
+
         // Zero based index of passed turns.
         this.turnsPassed = 0;
-        
+
         // Contains the timeout object.
         this.timeout = undefined;
-        
+
         // Contains the game board state.
         this.gameBoard = [
             [-1, -1, -1],
             [-1, -1, -1],
             [-1, -1, -1]
         ];
-        
+
         // Setup and start game.
         this.start = function () {
             var i;
-            
+
             this.matchmaking = false;
-            
+
             // Tell players the game has started
             // and inform them of their socket's index.
             for (i = 0; i < this.playerSockets.length; i += 1) {
                 this.socketWrite(i, model.socket.codes.startGame + ':' + i);
             }
-            
+
             // Start listening for player move.
             this.playerSockets[0].resume();
             // Set player move timeout.
             this.timeout = setTimeout(this.onTimeout.bind(this), model.socket.timeout);
         };
-        
+
         // Validate the current player's move.
         this.validateMove = function (move) {
             // Check move array is correct length.
@@ -188,7 +170,7 @@ var controller = {
                 // Convert player's move (Row 1, Col 2) to a integer.
                 move[1] = parseInt(move[1], 10);
                 move[2] = parseInt(move[2], 10);
-                
+
                 // Check player's move is an integer.
                 if (true === Number.isInteger(move[1]) && true === Number.isInteger(move[2])) {
                     // Check moves are within the grid size.
@@ -198,29 +180,29 @@ var controller = {
                             if (-1 === this.gameBoard[move[1]][move[2]]) {
                                 // Assign slot to current player.
                                 this.gameBoard[move[1]][move[2]] = this.playerTurn;
-                                
+
                                 // Inform other users of the player's move.
                                 this.socketWriteAll(model.socket.codes.playerMoved + ':' + move[1] + ':' + move[2]);
-                                
+
                                 // Check if player won.
                                 this.turnsPassed += 1;
                                 if (this.turnsPassed >= model.game.turnsToWin) {
                                     this.checkIfPlayerWon(move);
                                 }
-                                
+
                                 // Start next player's turn.
                                 this.playerTurn += 1;
                                 if (this.playerTurn === model.game.playersPerGame) {
                                     this.playerTurn = 0;
                                 }
-                                
+
                                 // Inform players of next turn.
                                 this.socketWriteAll(model.socket.codes.playerTurn + ':' + this.playerTurn);
-                                
+
                                 // Set player move timeout.
                                 clearTimeout(this.timeout);
                                 this.timeout = setTimeout(this.onTimeout.bind(this), model.socket.timeout);
-                                
+
                                 return;
                             }
                         }
@@ -230,154 +212,156 @@ var controller = {
             // Invalid move, tell player to try again.
             this.socketWrite(this.playerTurn, model.socket.codes.playerTurn + ':' + this.playerTurn);
         };
-        
+
         // Check if the current player has won.
         this.checkIfPlayerWon = function (move) {
             var i, x, slotCount;
-            
-			slotCount = 1;
-			if (0 < move[1]) {
-				for (i = (move[1] - 1); i > -1; i -= 1) {
-					if (this.playerTurn === this.gameBoard[i][move[2]]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
-			if (move[1] < (model.game.gridSize[0] - 1)) {
-				for (i = (move[1] + 1); i < model.game.gridSize[0]; i += 1) {
-					if (this.playerTurn === this.gameBoard[i][move[2]]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
-			
-			slotCount = 1;
-			if (0 < move[2]) {
-				for (i = (move[2] - 1); i > -1; i -= 1) {
-					if (this.playerTurn === this.gameBoard[move[1]][i]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
-			if (move[2] < (model.game.gridSize[1] - 1)) {
-				for (i = (move[2] + 1); i < model.game.gridSize[1]; i += 1) {
-					if (this.playerTurn === this.gameBoard[move[1]][i]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
-			
-			slotCount = 1;
-			if (0 < move[1] && move[2] < (model.game.gridSize[1] - 1)) {
-				for (i = (move[1] - 1), x = (move[2] + 1); i > -1 && x < model.game.gridSize[1]; i -= 1, x += 1) {
-					if (this.playerTurn === this.gameBoard[i][x]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
-			if (move[1] < (model.game.gridSize[0] - 1) && 0 < move[2]) {
-				for (i = (move[1] + 1), x = (move[2] - 1); i < model.game.gridSize[0] && x > -1; i += 1, x -= 1) {
-					if (this.playerTurn === this.gameBoard[i][x]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
-			
-			slotCount = 1;
-			if (0 < move[1] && 0 < move[2]) {
-				for (i = (move[1] - 1), x = (move[2] - 1); i > -1 && x > -1; i -= 1, x -= 1) {
-					if (this.playerTurn === this.gameBoard[i][x]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
-			if (move[1] < (model.game.gridSize[0] - 1) && move[2] < (model.game.gridSize[1] - 1)) {
-				for (i = (move[1] + 1), x = (move[2] + 1); i < model.game.gridSize[0] && x < model.game.gridSize[1]; i += 1, x += 1) {
-					if (this.playerTurn === this.gameBoard[i][x]) {
-						slotCount += 1;
-					} else {
-						break;
-					}
-					if (slotCount === model.game.slotsToWin) {
-						this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
-						this.endGame();
-					}
-				}
-			}
+
+            slotCount = 1;
+            if (0 < move[1]) {
+                for (i = (move[1] - 1); i > -1; i -= 1) {
+                    if (this.playerTurn === this.gameBoard[i][move[2]]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
+            if (move[1] < (model.game.gridSize[0] - 1)) {
+                for (i = (move[1] + 1); i < model.game.gridSize[0]; i += 1) {
+                    if (this.playerTurn === this.gameBoard[i][move[2]]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
+
+            slotCount = 1;
+            if (0 < move[2]) {
+                for (i = (move[2] - 1); i > -1; i -= 1) {
+                    if (this.playerTurn === this.gameBoard[move[1]][i]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
+            if (move[2] < (model.game.gridSize[1] - 1)) {
+                for (i = (move[2] + 1); i < model.game.gridSize[1]; i += 1) {
+                    if (this.playerTurn === this.gameBoard[move[1]][i]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
+
+            slotCount = 1;
+            if (0 < move[1] && move[2] < (model.game.gridSize[1] - 1)) {
+                for (i = (move[1] - 1), x = (move[2] + 1); i > -1 && x < model.game.gridSize[1]; i -= 1, x += 1) {
+                    if (this.playerTurn === this.gameBoard[i][x]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
+            if (move[1] < (model.game.gridSize[0] - 1) && 0 < move[2]) {
+                for (i = (move[1] + 1), x = (move[2] - 1); i < model.game.gridSize[0] && x > -1; i += 1, x -= 1) {
+                    if (this.playerTurn === this.gameBoard[i][x]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
+
+            slotCount = 1;
+            if (0 < move[1] && 0 < move[2]) {
+                for (i = (move[1] - 1), x = (move[2] - 1); i > -1 && x > -1; i -= 1, x -= 1) {
+                    if (this.playerTurn === this.gameBoard[i][x]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
+            if (move[1] < (model.game.gridSize[0] - 1) && move[2] < (model.game.gridSize[1] - 1)) {
+                for (i = (move[1] + 1), x = (move[2] + 1); i < model.game.gridSize[0] && x < model.game.gridSize[1]; i += 1, x += 1) {
+                    if (this.playerTurn === this.gameBoard[i][x]) {
+                        slotCount += 1;
+                    } else {
+                        break;
+                    }
+                    if (slotCount === model.game.slotsToWin) {
+                        this.socketWriteAll(model.socket.codes.playerWon + ':' + this.playerTurn);
+                        this.endGame();
+                    }
+                }
+            }
         };
-        
+
         // Close sockets and end game.
         this.endGame = function () {
             var i;
-            
+
             // Remove socket onClose event handler.
             this.onClose = function () {};
-            
+
             // Close all player sockets.
             for (i = 0; i < this.playerSockets.length; i += 1) {
                 this.playerSockets[i].end();
             }
-            
+
             // Remove game from memory.
             controller.games.splice(controller.games.indexOf(this), 1);
         };
-        
+
         // Send data to a specific player socket by array index.
         this.socketWrite = function (socketIndex, data) {
-            this.playerSockets[socketIndex].write(data + '\n');
+            console.log("Writing '%s' to player '%d'", data, socketIndex);
+            this.playerSockets[socketIndex].write(data + "\n");
         };
-        
+
         // Send data to all players.
         this.socketWriteAll = function (data) {
             var i;
-            
+
             for (i = 0; i < this.playerSockets.length; i += 1) {
-                this.playerSockets[i].write(data + '\n');
+                console.log("Writing '%s' to player '%d'", data, i);
+                this.playerSockets[i].write(data + "\n");
             }
         };
-        
+
         // Handle socket error.
         this.onError = function (error) {
             console.error(error);
@@ -386,15 +370,15 @@ var controller = {
         // Handle incoming player data.
         this.onData = function (data) {
             this.playerSockets[this.playerTurn].pause();
-            
+
             // Convert data to array for reading.
             data = data.split(':');
             // Validate the current player's move.
             this.validateMove(data);
-            
+
             this.playerSockets[this.playerTurn].resume();
         };
-        
+
         // Handle player move timeout.
         this.onTimeout = function () {
             // Inform users a player timed out.
@@ -408,7 +392,7 @@ var controller = {
             if (true === this.matchmaking) {
                 var i,
                     playerCount = this.playerSockets.length;
-                
+
                 // Find and remove dead player sockets.
                 for (i = 0; i < playerCount; i += 1) {
                     if (this.playerSockets[i] === undefined) {
@@ -431,7 +415,7 @@ var controller = {
             }
         };
     },
-    
+
     // Array of active game instances.
     games: []
 };
