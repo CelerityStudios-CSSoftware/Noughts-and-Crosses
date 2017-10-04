@@ -5,6 +5,8 @@ using System.Text;
 
 public partial class Server : MonoBehaviour {
     private string _messageBeingReceived;
+    private bool _paused = false;
+
     //TODO add arg count checking to this class
     private Dictionary<string, MessageType> _messageTypeCodes = new Dictionary<string, MessageType>() {
         { "f", MessageType.MATCHMAKING },
@@ -16,9 +18,27 @@ public partial class Server : MonoBehaviour {
     };
 
     void Update() {
-        if (_socket.Connected) {
+        if (_socket.Connected && !_paused) {
             ReadFromServer();
         }
+    }
+
+    // Pausing the server IO allows to ensure that a message
+    // handler will be set up for incoming messages when
+    // switching scenes. Pause before loading a scene and
+    // Unpause in the Start function of one of the MonoBehaviour
+    // That sets up a handler for the message you don't want to
+    // miss.
+    public void Pause() {
+        _paused = true;
+    }
+
+    public void Unpause() {
+        _paused = false;
+    }
+
+    public bool IsPaused() {
+        return _paused;
     }
 
     public int WriteToServer(string message) {

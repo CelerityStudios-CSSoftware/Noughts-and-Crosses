@@ -3,8 +3,10 @@
 public partial class Match : MonoBehaviour {
     private static Match _instance;
     private const int NONE = -1;
+    private const int GRID_SIZE = 3;
 
     private int[,] _grid;
+    private int _winner;
     public int currentTurnPlayerID;
 
     public static Match instance {
@@ -17,37 +19,45 @@ public partial class Match : MonoBehaviour {
     }
 
     void Start() {
-        _grid = new int[3, 3];
-        currentTurnPlayerID = -1;
+        _grid = new int[GRID_SIZE, GRID_SIZE];
+        Reset();
+        Server.instance.Unpause();
+    }
+
+    void Reset() {
+        for (int y = 0; y < GRID_SIZE; y++) {
+            for (int x = 0; x < GRID_SIZE; x++) {
+                _grid[x, y] = NONE;
+            }
+        }
+        currentTurnPlayerID = 0;
+        _winner = NONE;
     }
 
     public bool PlayMove(uint x, uint y) {
-        if (_grid[x, y] != 0) return false;
+        if (_grid[x, y] != NONE || _winner != NONE) return false;
         _grid[x, y] = currentTurnPlayerID;
-        //TODO use player manager to get material from playerID
-        _updateTileMaterial(x, y, null);
-        _checkEndGame();
+        Player currentPlayer = PlayerManager.instance.GetPlayerFromId(currentTurnPlayerID);
+        _updateTileMaterial(x, y, currentPlayer.material);
         return true;
     }
 
-    private void _checkEndGame() {
-        //TODO actually check for the end of the game
-        return;
+    public void SetWinner(int playerID) {
+        _winner = playerID;
     }
 
     //TODO move this feature to Grid class
     private void _updateTileMaterial(uint x, uint y, Material material) {
-        ChangeMaterialOnClick tileComponent;
+        MaterialChanger tileComponent;
         string tileName = TileInfo.BuildTileName(x, y);
 
         if ((tileComponent = _getTileComponent(tileName)) == null) return;
-        //TODO pass material once changeColor accepts it
-        tileComponent.ChangeColor(false);
+        tileComponent.ChangeMaterial(material);
     }
 
-    private ChangeMaterialOnClick _getTileComponent(string tileName) {
+    private MaterialChanger _getTileComponent(string tileName) {
         GameObject obj = GameObject.Find(tileName);
         if (obj == null) return null;
-        return obj.GetComponent<ChangeMaterialOnClick>();
+        return obj.GetComponent<MaterialChanger>();
     }
 }

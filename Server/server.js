@@ -107,6 +107,7 @@ var controller = {
             if (playerCount === model.game.playersPerGame) {
                 // Add last player and start game.
                 controller.games[newGame].playerSockets.push(socket);
+                controller.games[newGame].socketWriteAll(model.socket.codes.playerFound + ':' + playerCount + ':' + playerCount);
                 controller.games[newGame].start();
 
                 // Create next game instance.

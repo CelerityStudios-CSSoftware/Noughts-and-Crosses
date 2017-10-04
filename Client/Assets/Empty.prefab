@@ -25,6 +25,7 @@ GameObject:
   - 54: {fileID: 54000014065846756}
   - 114: {fileID: 114000010180778196}
   - 114: {fileID: 114000013782099242}
+  - 114: {fileID: 114000013478481750}
   m_Layer: 0
   m_Name: Empty
   m_TagString: Untagged
@@ -119,8 +120,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4720474e9c64c843b827e12ae268c14, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerColor: {fileID: 0}
-  enemyColor: {fileID: 0}
+--- !u!114 &114000013478481750
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1000013649685202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a6055542a3d4cb4e9cb0bde1c39312d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &114000013782099242
 MonoBehaviour:
   m_ObjectHideFlags: 1

@@ -1,9 +1,7 @@
 ﻿using UnityEngine;
 
 public class GridGenerator : MonoBehaviour {
-    public ChangeMaterialOnClick emptyGridTile;
-    public PlayerColor playerColor;
-    public PlayerColor enemyColor;
+    public ClickableTile emptyGridTile;
     public uint width;
     public uint height;
 
@@ -11,10 +9,8 @@ public class GridGenerator : MonoBehaviour {
 	void Start () {
         for (uint x = 0; x < width; x++) {
             for (uint y = 0; y < height; y++) {
-                var tile = Instantiate(emptyGridTile, new Vector3(x, y, transform.position.z), Quaternion.identity, transform) as ChangeMaterialOnClick;
+                var tile = Instantiate(emptyGridTile, new Vector3(x, y, transform.position.z), Quaternion.identity, transform) as ClickableTile;
                 var tileInfo = tile.gameObject.GetComponent<TileInfo>();
-                tile.playerColor = playerColor;
-                tile.enemyColor = enemyColor;
 
                 tileInfo.x = x;
                 tileInfo.y = y;

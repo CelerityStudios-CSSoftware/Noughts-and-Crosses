@@ -23,6 +23,7 @@ public class PlayButton : MonoBehaviour {
         }
         Debug.Log(serverAddress.text);
         Debug.Log(serverPort.text);
+        Server.instance.Pause();
         Server.Connect(addr, port);
         SceneManager.LoadScene(1);
     }
