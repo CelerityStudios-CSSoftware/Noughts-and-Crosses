@@ -8,15 +8,16 @@ const include = {
 
 const model = {
     server: {
-        allowHalfOpen: false,
-        pauseOnConnect: false,
+        // comments to explain some of these would be welcome
+        allowHalfOpen: false, // what is half open?
+        pauseOnConnect: false, // what is paused on connect?
 
         maxConnections: 5000,
 
         host: "127.0.0.1",
         port: 12345,
-        backlog: 50,
-        exclusive: true
+        backlog: 50, // what's the backlog?
+        exclusive: true // what does exclusive mean?
     },
 
     socket: {
@@ -51,7 +52,11 @@ const model = {
         maxPossibleTurns: 9,
         turnTimeout: 30000,
 
+        // that board is 3x3. either this var is named wrong and actually
+        // represents maximum indices for each dimension or you should set
+        // it to [3, 3]
         boardSize: [2, 2],
+        // do you have to manually create the gameBoard even though the size is given?
         gameBoard: [
             [-1, -1, -1],
             [-1, -1, -1],
@@ -100,7 +105,7 @@ const controller = (function () {
             let gameBoard = [];
 
             model.game.gameBoard.forEach(function (row) {
-                gameBoard.push(row.slice(0));
+                gameBoard.push(row.slice(0)); // isn't row.slice(0) the same as row?
             });
 
             return gameBoard;
@@ -108,16 +113,21 @@ const controller = (function () {
 
         newGame.startGame = function () {
             newGame.playerSockets.forEach(function (socket, index) {
-                socket.pause();
+                socket.pause(); // doesn't this override the pauseOnConnect parameter? since you pause it anyway?
                 newGame.socketWrite(socket, model.socket.codes.startGame, index);
             });
 
             newGame.isActive = true;
-            newGame.playerSockets[0].resume();
+            newGame.playerSockets[0].resume(); // only the first player is unpaused?
             newGame.socketWriteAll(model.socket.codes.playerTurn, newGame.playerTurn);
+            // tiNeout? :)
             newGame.playerTurnTineout = setTimeout(newGame.events.game.turnTimedOut, model.game.turnTimeout);
         };
 
+        // this function does too much
+        // I think it would be better to have a validateMove function that
+        // returns true or false and then an applyMove function that applies
+        // the move
         newGame.validateMove = function (moveRow, moveCol) {
             moveRow = parseInt(moveRow, 10);
             moveCol = parseInt(moveCol, 10);
