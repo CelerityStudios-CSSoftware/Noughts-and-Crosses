@@ -350,7 +350,7 @@ const controller = (function () {
 
         newGame.socketWriteAll = function (...data) {
             newGame.playerSockets.forEach(function (socket) {
-                newGame.socketWrite(socket, data);
+                newGame.socketWrite(socket, ...data);
             });
         };
 
