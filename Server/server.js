@@ -458,6 +458,10 @@ const controller = (function () {
                 return [playerId, args];
             };
 
+            // This needs to be after the functions it puts in the table because
+            // it takes the objects property value *at that point in time* at
+            // which the table is declared which would be undefined if the
+            // functions weren't yet declared.
             handlers.functionsForCodes = (function () {
                 let table = {};
                 table[config.socket.codes.playerMoved] = [handlers.handleMove, 2];
@@ -472,7 +476,7 @@ const controller = (function () {
                     if (argCount === args.length) {
                         handler(playerId, args);
                     } else {
-                        console.log("Incorrect arg count. Message type " + code + " expects " + argCount + ", received " + args.length);
+                        console.error("Incorrect arg count. Message type " + code + " expects " + argCount + ", received " + args.length);
                     }
                 }
             };
@@ -491,20 +495,33 @@ const controller = (function () {
 
             onConnection: function (socket) {
                 // Get the matchmaking game instance.
-                let newGame = games[games.length - 1];
+                let newGameIndex = games.length - 1;
+                let newGame = games[newGameIndex];
 
                 // Give the player's socket an ID.
                 socket.info = {
                     id: newGame.playerSockets.length
                 };
+                console.log(
+                    "Player connected from " + socket.remoteAddress + ":"
+                    + socket.remotePort + " putting in game " + newGameIndex
+                    + " as player " + socket.info.id
+                );
 
                 socket.on("error", newGame.events.socket.onError);
                 socket.on("data", function (data) {
+                    // Remove whitespace at the start and end of the data
+                    data = data.trim();
                     // Parse package data into array.
                     data = data.split(config.socket.codes.dataSeparator);
                     newGame.messageHandlers.handleMessage(data[0], socket.info.id, data.splice(1));
                 });
                 socket.on("close", function () {
+                    console.log(
+                        "Player " + socket.info.id + " disconnected from "
+                        + socket.remoteAddress + ":" + socket.remotePort
+                        + " in game " + newGameIndex
+                    );
                     // Remove the player socket that has left.
                     newGame.playerSockets.splice(socket.info.id, 1);
 
