@@ -501,7 +501,6 @@ const controller = (function () {
                 socket.on("error", newGame.events.socket.onError);
                 socket.on("data", function (data) {
                     // Parse package data into array.
-                    console.log("received message. raw data: " + data);
                     data = data.split(config.socket.codes.dataSeparator);
                     newGame.messageHandlers.handleMessage(data[0], socket.info.id, data.splice(1));
                 });
