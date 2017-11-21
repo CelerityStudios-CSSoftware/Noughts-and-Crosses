@@ -1,3 +1,5 @@
+/*jslint node */
+
 "use strict";
 
 // Contains running game instances.
@@ -50,6 +52,8 @@ const config = {
             playerTurnTimeout: "to",
             // Signals a player's move.
             playerMoved: "m",
+            // Signals a player has given up
+            playerConcede: "c",
             // Signals a draw.
             playerDraw: "pd",
             // Signals a player has won.
@@ -419,6 +423,63 @@ const controller = (function () {
             }
         };
 
+        newGame.messageHandlers = (function () {
+            let handlers = {};
+
+            handlers.handleMove = function (playerId, args) {
+                let [x, y] = args;
+                if (
+                    playerId !== newGame.playerTurn
+                    || newGame.isMatchmaking
+                    || !newGame.validateMove(x, y)
+                ) {
+                    return;
+                }
+                newGame.applyPlayerMove(x, y);
+                if (newGame.checkIfPlayerCanWin()) {
+                    let endGameReason = null;
+                    if (newGame.checkIfPlayerWon(x, y)) {
+                        endGameReason = config.socket.codes.playerWon;
+                    } else if (newGame.turnsPassed === config.game.maxPossibleTurns) {
+                        endGameReason = config.socket.codes.playerDraw;
+                    }
+                    if (null !== endGameReason) {
+                        newGame.socketWriteAll(endGameReason, playerId);
+                        newGame.endGame();
+                        return;
+                    }
+                }
+                newGame.nextTurn();
+                newGame.resetTurnTimeout();
+            };
+
+            handlers.handleConcede = function (playerId, args) {
+                //TO-DO: write logic for this
+                return [playerId, args];
+            };
+
+            handlers.functionsForCodes = (function () {
+                let table = {};
+                table[config.socket.codes.playerMoved] = [handlers.handleMove, 2];
+                table[config.socket.codes.playerConcede] = [handlers.handleConcede, 0];
+                return table;
+            }());
+
+            handlers.handleMessage = function (code, playerId, args) {
+                if (handlers.functionsForCodes.hasOwnProperty(code)) {
+                    console.log("Message of type " + code + " received. args: " + args.join(":"));
+                    let [handler, argCount] = handlers.functionsForCodes[code];
+                    if (argCount === args.length) {
+                        handler(playerId, args);
+                    } else {
+                        console.log("Incorrect arg count. Message type " + code + " expects " + argCount + ", received " + args.length);
+                    }
+                }
+            };
+
+            return handlers;
+        }());
+
         return newGame;
     };
 
@@ -439,34 +500,10 @@ const controller = (function () {
 
                 socket.on("error", newGame.events.socket.onError);
                 socket.on("data", function (data) {
-                    if (socket.info.id === newGame.playerTurn && false === newGame.isMatchmaking) {
-                        // Parse package data into array.
-                        data = data.split(config.socket.codes.dataSeparator);
-                        // Check if packet contains the player's move.
-                        if (data[0] === config.socket.codes.playerMoved) {
-                            if (true === newGame.validateMove(data[1], data[2])) {
-                                newGame.applyPlayerMove(data[1], data[2]);
-
-                                if (true === newGame.checkIfPlayerCanWin()) {
-                                    if (true === newGame.checkIfPlayerWon(data[1], data[2])) {
-                                        // Inform players a user has won.
-                                        newGame.socketWriteAll(config.socket.codes.playerWon, newGame.playerTurn);
-                                        newGame.endGame();
-                                        return;
-                                    }
-                                    if (newGame.turnsPassed === config.game.maxPossibleTurns) {
-                                        // Inform players of a draw.
-                                        newGame.socketWriteAll(config.socket.codes.playerDraw, newGame.playerTurn);
-                                        newGame.endGame();
-                                        return;
-                                    }
-                                }
-
-                                newGame.nextTurn();
-                                newGame.resetTurnTimeout();
-                            }
-                        }
-                    }
+                    // Parse package data into array.
+                    console.log("received message. raw data: " + data);
+                    data = data.split(config.socket.codes.dataSeparator);
+                    newGame.messageHandlers.handleMessage(data[0], socket.info.id, data.splice(1));
                 });
                 socket.on("close", function () {
                     // Remove the player socket that has left.
