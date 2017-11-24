@@ -68,3 +68,5 @@ const config = {
         return game;
     }())
 };
+
+module.exports = config;
