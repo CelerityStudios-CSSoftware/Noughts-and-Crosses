@@ -1,4 +1,4 @@
-/*jslint node */
+/*jslint node*/
 
 "use strict";
 
@@ -123,10 +123,7 @@ const controller = (function () {
         newGame.checkIfPlayerCanWin = function () {
             // Check if enough turns have passed to win.
             newGame.turnsPassed += 1;
-            if (newGame.turnsPassed >= config.game.turnsNeededToWin) {
-                return true;
-            }
-            return false;
+            return (newGame.turnsPassed >= config.game.turnsNeededToWin);
         };
 
         newGame.checkIfPlayerWon = function (moveRow, moveCol) {
@@ -360,22 +357,20 @@ const controller = (function () {
 
             handlers.handleMove = function (playerId, args) {
                 let [x, y] = args;
-                if (
-                    playerId !== newGame.playerTurn
-                    || newGame.isMatchmaking
-                    || !newGame.validateMove(x, y)
-                ) {
+
+                if (playerId !== newGame.playerTurn || true === newGame.isMatchmaking || false === newGame.validateMove(x, y)) {
                     return;
                 }
+
                 newGame.applyPlayerMove(x, y);
-                if (newGame.checkIfPlayerCanWin()) {
-                    let endGameReason = null;
-                    if (newGame.checkIfPlayerWon(x, y)) {
+                if (true === newGame.checkIfPlayerCanWin()) {
+                    let endGameReason;
+                    if (true === newGame.checkIfPlayerWon(x, y)) {
                         endGameReason = config.socket.codes.playerWon;
                     } else if (newGame.turnsPassed === config.game.maxPossibleTurns) {
                         endGameReason = config.socket.codes.playerDraw;
                     }
-                    if (null !== endGameReason) {
+                    if (undefined !== endGameReason) {
                         newGame.socketWriteAll(endGameReason, playerId);
                         newGame.endGame();
                         return;
@@ -385,9 +380,10 @@ const controller = (function () {
                 newGame.resetTurnTimeout();
             };
 
-            handlers.handleConcede = function (playerId, args) {
-                //TO-DO: write logic for this
-                return [playerId, args];
+            handlers.handleConcede = function (playerId) {
+                // Alert users a player conceded.
+                newGame.socketWriteAll(config.socket.codes.playerLeft, playerId, 1);
+                newGame.endGame();
             };
 
             // This needs to be after the functions it puts in the table because
@@ -397,12 +393,12 @@ const controller = (function () {
             handlers.functionsForCodes = (function () {
                 let table = {};
                 table[config.socket.codes.playerMoved] = [handlers.handleMove, 2];
-                table[config.socket.codes.playerConcede] = [handlers.handleConcede, 0];
+                table[config.socket.codes.playerLeft] = [handlers.handleConcede, 0];
                 return table;
             }());
 
             handlers.handleMessage = function (code, playerId, args) {
-                if (handlers.functionsForCodes.hasOwnProperty(code)) {
+                if (undefined !== handlers.functionsForCodes[code]) {
                     console.log("Message of type " + code + " received. args: " + args.join(":"));
                     let [handler, argCount] = handlers.functionsForCodes[code];
                     if (argCount === args.length) {
@@ -461,8 +457,8 @@ const controller = (function () {
                         // Inform players of new user count.
                         newGame.socketWriteAll(config.socket.codes.playerFound, newGame.playerSockets.length, config.game.playersPerGame);
                     } else if (false === newGame.isMatchmaking) {
-                        // Inform players a user has left.
-                        newGame.socketWriteAll(config.socket.codes.playerLeft);
+                        // Inform players a user has disconnected.
+                        newGame.socketWriteAll(config.socket.codes.playerLeft, socket.info.id, 0);
                         newGame.endGame();
                     }
                 });
