@@ -267,6 +267,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UIToHide: {fileID: 1000011883113552}
+  which: 1
 --- !u!114 &114000012630815082
 MonoBehaviour:
   m_ObjectHideFlags: 1

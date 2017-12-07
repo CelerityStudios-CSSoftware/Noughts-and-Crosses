@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public partial class Match : MonoBehaviour {
     private static Match _instance;
@@ -53,6 +54,18 @@ public partial class Match : MonoBehaviour {
             message = "Player " + _winner + " won!";
         }
         announcement.Show(message, Announcement.ShowType.PERSIST);
+        announcement.ShowButtons("Main menu", "Play again", _backToMainMenu, _backToMatchmaking);
+    }
+
+    private void _backToMainMenu() {
+        Server.Disconnect();
+        SceneManager.LoadScene(0);
+    }
+
+    private void _backToMatchmaking() {
+        Server.instance.Pause();
+        Server.Reset();
+        SceneManager.LoadScene(1);
     }
 
     //TODO move this feature to Grid class

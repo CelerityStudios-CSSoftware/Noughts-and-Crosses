@@ -2,14 +2,10 @@
 using System.Net.Sockets;
 using UnityEngine.Events;
 using System.Collections.Generic;
+using System.Net;
 
 public partial class Server : MonoBehaviour {
-    private static Server _instance;
-    private TcpClient _socket;
-
     public class MessageEvent : UnityEvent<string[]> { }
-
-    private Dictionary<MessageType, MessageEvent> _eventDictionary;
 
     public enum MessageType {
         MATCHMAKING,
@@ -20,6 +16,10 @@ public partial class Server : MonoBehaviour {
         PLAYER_DISCONNECTED,
         PLAYER_TIMED_OUT
     }
+
+    private Dictionary<MessageType, MessageEvent> _eventDictionary;
+    private static Server _instance;
+    private TcpClient _socket;
 
     public static Server instance {
         get {
@@ -41,6 +41,20 @@ public partial class Server : MonoBehaviour {
 
     public static void Connect(string address, int port) {
         instance._socket.Connect(address, port);
+    }
+
+    public static void Disconnect() {
+        instance._socket.Close();
+        ((System.IDisposable)instance._socket).Dispose();
+        instance._socket = new TcpClient();
+    }
+
+    public static void Reset() {
+        var endPoint = ((IPEndPoint)instance._socket.Client.RemoteEndPoint);
+        string address = endPoint.Address.ToString();
+        int port = endPoint.Port;
+        Disconnect();
+        Connect(address, port);
     }
 
     public static void AddListener(MessageType type, UnityAction<string[]> listener) {
