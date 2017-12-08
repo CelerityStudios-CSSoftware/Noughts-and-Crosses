@@ -28,8 +28,13 @@ const config = {
             // Used to end packets.
             endLine: "\n",
 
+            // Used to reconnect player.
+            connectionId: "cid",
+
             // Signals start of game.
             startGame: "s",
+            // Signals the game has to end.
+            endGame: "eg",
 
             // Signals a player has been found during matchmaking.
             playerFound: "f",
@@ -52,6 +57,8 @@ const config = {
     game: (function () {
         let game = {};
 
+        // Id length used for reconnection.
+        game.connectionIdLength = 8;
         // Maximum zero base index of board's rows and columns.
         game.boardMaxRowColIndexes = [2, 2];
         // Players required for a game to start.

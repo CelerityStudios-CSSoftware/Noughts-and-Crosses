@@ -46,6 +46,30 @@ const controller = (function () {
         }
     };
 
+    newController.generateRandomNumber = function (min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    };
+
+    newController.generateId = function () {
+        let id = "";
+        let l = "abcdefghijklmnopqrstuvwxyz";
+        let n = "0123456789";
+
+        let i = 0;
+        while (i < config.game.connectionIdLength) {
+            if (0 === newController.generateRandomNumber(0, 1)) {
+                id += l[newController.generateRandomNumber(0, 25)];
+            } else {
+                id += n[newController.generateRandomNumber(0, 9)];
+            }
+            i += 1;
+        }
+
+        return id;
+    };
+
     // Creates and returns a new game instance.
     newController.createGame = function () {
         let newGame = {};
@@ -55,6 +79,7 @@ const controller = (function () {
         newGame.playerTurn = 0;
         newGame.turnsPassed = 0;
         newGame.playerTurnTimeout = {};
+        newGame.disconnectedPlayerIds = [];
         newGame.gameBoard = (function () {
             let gameBoard = [];
 
@@ -290,14 +315,32 @@ const controller = (function () {
         newGame.nextTurn = function () {
             // Set next player's turn.
             newGame.playerTurn += 1;
-            if (newGame.playerTurn === config.game.playersPerGame) {
+            if (newGame.playerTurn >= config.game.playersPerGame) {
                 newGame.playerTurn = 0;
             }
+
+            // check if player is connected.
+            let x = 0;
+            while (x < 1) {
+                if (newGame.disconnectedPlayerIds[newGame.playerTurn][0] === 1) {
+                    newGame.playerTurn += 1;
+                    if (newGame.playerTurn >= config.game.playersPerGame) {
+                        newGame.playerTurn = 0;
+                    }
+
+                    // Check if next player is connected.
+                    x += -1;
+                }
+                x += 1;
+            }
+
             // Inform players of next user's turn.
             newGame.socketWriteAll(config.socket.codes.playerTurn, newGame.playerTurn);
         };
 
         newGame.endGame = function () {
+            newGame.socketWriteAll(config.socket.codes.endGame);
+
             // Close all player sockets.
             newGame.playerSockets.forEach(function (socket) {
                 socket.pause();
@@ -380,10 +423,7 @@ const controller = (function () {
                 newGame.resetTurnTimeout();
             };
 
-            handlers.handleConcede = function (playerId) {
-                // Alert users a player conceded.
-                newGame.socketWriteAll(config.socket.codes.playerLeft, playerId, 1);
-                newGame.endGame();
+            handlers.handleConcede = function () {
             };
 
             // This needs to be after the functions it puts in the table because
@@ -430,6 +470,11 @@ const controller = (function () {
                 socket.info = {
                     id: newGame.playerSockets.length
                 };
+
+                let cid = newController.generateId();
+                newGame.disconnectedPlayerIds.push([0, cid]);
+                newGame.socketWrite(socket, config.socket.codes.connectionId, cid);
+
                 console.log(
                     "Player connected from " + socket.remoteAddress + ":"
                     + socket.remotePort + " putting in game " + newGameIndex
@@ -450,16 +495,24 @@ const controller = (function () {
                         + socket.remoteAddress + ":" + socket.remotePort
                         + " in game " + newGameIndex
                     );
+
                     // Remove the player socket that has left.
                     newGame.playerSockets.splice(socket.info.id, 1);
 
                     if (true === newGame.isMatchmaking) {
+                        newGame.disconnectedPlayerIds.splice(socket.info.id, 1);
+
                         // Inform players of new user count.
                         newGame.socketWriteAll(config.socket.codes.playerFound, newGame.playerSockets.length, config.game.playersPerGame);
                     } else if (false === newGame.isMatchmaking) {
+                        newGame.disconnectedPlayerIds[socket.info.id][0] = 1;
+
                         // Inform players a user has disconnected.
                         newGame.socketWriteAll(config.socket.codes.playerLeft, socket.info.id, 0);
-                        newGame.endGame();
+
+                        if (2 > newGame.playerSockets.length) {
+                            newGame.endGame();
+                        }
                     }
                 });
 
