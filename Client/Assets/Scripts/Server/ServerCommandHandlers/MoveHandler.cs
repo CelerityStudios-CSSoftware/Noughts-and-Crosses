@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 
 public class MoveHandler : MonoBehaviour {
-
     void Start() {
         Server.AddListener(Server.MessageType.MOVE, _ParseEnemyMove);
     }

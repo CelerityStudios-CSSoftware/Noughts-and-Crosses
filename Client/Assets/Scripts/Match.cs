@@ -50,11 +50,19 @@ public partial class Match : MonoBehaviour {
         string message;
         if (PlayerManager.instance.Self().id == _winner) {
             message = "You won!";
+        } else if (_winner == -1) {
+            message = "You gave up!";
         } else {
             message = "Player " + _winner + " won!";
         }
         announcement.Show(message, Announcement.ShowType.PERSIST);
         announcement.ShowButtons("Main menu", "Play again", _backToMainMenu, _backToMatchmaking);
+    }
+
+    public void Concede() {
+        Debug.Log("You gave up!");
+        Server.instance.WriteToServer("pl:1");
+        SetWinner(-1);
     }
 
     private void _backToMainMenu() {
