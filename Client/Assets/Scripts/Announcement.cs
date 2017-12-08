@@ -11,6 +11,7 @@ public class Announcement : MonoBehaviour {
     public float fadeDuration;
     public Button leftButton;
     public Button rightButton;
+    public GameObject collisionBlocker;
 
     private Text _text;
     private Text _leftButtonText;
@@ -40,6 +41,7 @@ public class Announcement : MonoBehaviour {
         _initialHeight = _rTransform.sizeDelta.y;
         // We assume that the buttons are the same height
         _extraButtonHeight = leftButton.GetComponent<RectTransform>().sizeDelta.y + _BUTTON_PADDING;
+        collisionBlocker.SetActive(false);
         if (PlayerManager.instance.Self().id == 0) {
             Show("You play first");
         } else {
@@ -50,6 +52,7 @@ public class Announcement : MonoBehaviour {
     public void Show(string message, ShowType type = ShowType.FADE_OUT) {
         _disableButtons();
         _text.text = message;
+        if (type == ShowType.PERSIST) collisionBlocker.SetActive(true);
         _group.alpha = 1f;
         _startedDisplayingTime = Time.time;
         _type = type;
@@ -76,10 +79,11 @@ public class Announcement : MonoBehaviour {
     }
 
     void Update() {
-        if (_group.alpha != 0f
+        if (_group.alpha > 0f
           && _type == ShowType.FADE_OUT
           && Time.time > _startedDisplayingTime + displayDuration) {
             _group.alpha -= 1f / fadeDuration * Time.deltaTime;
+            if (_group.alpha <= 0f) collisionBlocker.SetActive(false);
         }
     }
 }
