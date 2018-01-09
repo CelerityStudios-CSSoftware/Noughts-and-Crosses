@@ -13,6 +13,8 @@ const include = {
 // Contains all application constants.
 const config = require("./config");
 
+const logger = require("./logger");
+
 // Main application logic.
 const controller = (function () {
     let newController = {};
@@ -42,7 +44,7 @@ const controller = (function () {
             });
 
             // Print details of the servers configuration.
-            console.log("----- Server Started -----", "\nHost: ", config.server.host, "\nPort: ", config.server.port, "\nBacklog: ", config.server.backlog, "\nExclusive: ", config.server.exclusive, "\nMax connections: ", config.server.maxConnections);
+            logger.log("----- Server Started -----", "\nHost: ", config.server.host, "\nPort: ", config.server.port, "\nBacklog: ", config.server.backlog, "\nExclusive: ", config.server.exclusive, "\nMax connections: ", config.server.maxConnections);
         }
     };
 
@@ -359,7 +361,7 @@ const controller = (function () {
             try {
                 socket.write(data);
             } catch (ex) {
-                console.error(ex);
+                logger.logError(ex);
             }
         };
 
@@ -390,7 +392,7 @@ const controller = (function () {
 
             socket: {
                 onError: function (error) {
-                    console.error(error);
+                    logger.logError(error);
                 }
             }
         };
@@ -439,12 +441,12 @@ const controller = (function () {
 
             handlers.handleMessage = function (code, playerId, args) {
                 if (undefined !== handlers.functionsForCodes[code]) {
-                    console.log("Message of type " + code + " received. args: " + args.join(":"));
+                    logger.log("Message of type " + code + " received. args: " + args.join(":"));
                     let [handler, argCount] = handlers.functionsForCodes[code];
                     if (argCount === args.length) {
                         handler(playerId, args);
                     } else {
-                        console.error("Incorrect arg count. Message type " + code + " expects " + argCount + ", received " + args.length);
+                        logger.logError("Incorrect arg count. Message type " + code + " expects " + argCount + ", received " + args.length);
                     }
                 }
             };
@@ -458,7 +460,7 @@ const controller = (function () {
     newController.events = {
         server: {
             onError: function (error) {
-                console.error(error);
+                logger.logError(error);
             },
 
             onConnection: function (socket) {
@@ -475,7 +477,7 @@ const controller = (function () {
                 newGame.disconnectedPlayerIds.push([0, cid]);
                 newGame.socketWrite(socket, config.socket.codes.connectionId, cid);
 
-                console.log(
+                logger.log(
                     "Player connected from " + socket.remoteAddress + ":"
                     + socket.remotePort + " putting in game " + newGameIndex
                     + " as player " + socket.info.id
@@ -490,7 +492,7 @@ const controller = (function () {
                     newGame.messageHandlers.handleMessage(data[0], socket.info.id, data.splice(1));
                 });
                 socket.on("close", function () {
-                    console.log(
+                    logger.log(
                         "Player " + socket.info.id + " disconnected from "
                         + socket.remoteAddress + ":" + socket.remotePort
                         + " in game " + newGameIndex
