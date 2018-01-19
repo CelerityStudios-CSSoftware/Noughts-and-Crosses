@@ -101,6 +101,7 @@ const controller = (function () {
                 r += 1;
             }
 
+            logger.logDebug("[Debug]\nGame board created...\n" + gameBoard);
             return gameBoard;
         }());
 
@@ -114,6 +115,8 @@ const controller = (function () {
             // Inform players of new turn.
             newGame.socketWriteAll(config.socket.codes.playerTurn, newGame.playerTurn);
             newGame.startTurnTimeout();
+
+            logger.logDebug("[Debug]\nGame started.");
         };
 
         newGame.validateMove = function (moveRow, moveCol) {
@@ -137,6 +140,7 @@ const controller = (function () {
 
             // Inform player his move was invalid and to try again.
             newGame.socketWrite(newGame.playerSockets[newGame.playerTurn], config.socket.codes.playerTurn, newGame.playerTurn);
+            logger.logDebug("[Debug]\nInvalid move...\n" + "R:" + moveRow + "C:" + moveCol);
             return false;
         };
 
@@ -145,6 +149,8 @@ const controller = (function () {
             newGame.gameBoard[moveRow][moveCol] = newGame.playerTurn;
             // Inform players of user's move.
             newGame.socketWriteAll(config.socket.codes.playerMoved, moveRow, moveCol);
+
+            logger.logDebug("[Debug]\nGame board changed...\n" + newGame.gameBoard);
         };
 
         newGame.checkIfPlayerCanWin = function () {
@@ -378,15 +384,30 @@ const controller = (function () {
         newGame.resetTurnTimeout = function () {
             // Reset player move timeout.
             clearTimeout(newGame.playerTurnTimeout);
-            newGame.playerTurnTimeout = setTimeout(newGame.events.game.turnTimedOut, config.game.turnTimeout);
+            newGame.playerTurnTimeout = setTimeout(newGame.events.game.turnTimedOut, (config.game.turnTimeout - (config.game.timeoutReduction * newGame.playerSockets[newGame.playerTurn].info.timeout)));
         };
 
         newGame.events = {
             game: {
                 turnTimedOut: function () {
-                    // Inform players a user took too long to move.
-                    newGame.socketWriteAll(config.socket.codes.playerTurnTimeout);
-                    newGame.endGame();
+                    logger.logDebug("[Debug]\nPlayer timed out...\n" + "Player " + newGame.playerTurn);
+
+                    // Check if the player has max time outs.
+                    if (newGame.playerSockets[newGame.playerTurn].info.timeout === config.game.maxTimeouts) {
+                        // Inform players a user took too long to move and has been kicked (2nd arg - 1=they have been kicked, 0=NOT kicked).
+                        newGame.socketWriteAll(config.socket.codes.playerTurnTimeout, 1);
+
+                        // Remove the player socket that has left.
+                        newGame.playerSockets.splice(newGame.playerSockets[newGame.playerTurn].info.id, 1);
+                        newGame.disconnectedPlayerIds.splice(newGame.playerSockets[newGame.playerTurn].info.id, 1);
+                    } else {
+                        // Inform players a user took too long to move and has been kicked (2nd arg - 1=they have been kicked, 0=NOT kicked).
+                        newGame.socketWriteAll(config.socket.codes.playerTurnTimeout, 0);
+
+                        // Represents the amount of times the player has timedout.
+                        newGame.playerSockets[newGame.playerTurn].info.timeout += 1;
+                        newGame.nextTurn();
+                    }
                 }
             },
 
@@ -405,6 +426,11 @@ const controller = (function () {
 
                 if (playerId !== newGame.playerTurn || true === newGame.isMatchmaking || false === newGame.validateMove(x, y)) {
                     return;
+                }
+
+                // Reset player timeout count.
+                if (0 !== newGame.playerSockets[newGame.playerTurn].info.timeout) {
+                    newGame.playerSockets[newGame.playerTurn].info.timeout = 0;
                 }
 
                 newGame.applyPlayerMove(x, y);
@@ -441,7 +467,7 @@ const controller = (function () {
 
             handlers.handleMessage = function (code, playerId, args) {
                 if (undefined !== handlers.functionsForCodes[code]) {
-                    logger.log("Message of type " + code + " received. args: " + args.join(":"));
+                    logger.logDebug("[Debug]\nMessage of type " + code + " received.\nargs: " + args.join(":"));
                     let [handler, argCount] = handlers.functionsForCodes[code];
                     if (argCount === args.length) {
                         handler(playerId, args);

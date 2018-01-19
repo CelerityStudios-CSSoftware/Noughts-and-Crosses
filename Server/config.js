@@ -71,6 +71,10 @@ const config = {
         game.maxPossibleTurns = (game.boardMaxRowColIndexes[0] * game.boardMaxRowColIndexes[1]) + 2;
         // Milliseconds before a turn times out.
         game.turnTimeout = 30000;
+        // Maximum times a player is allowed to timeout.
+        game.maxTimeouts = 2;
+        // Amount of time to reduce player timeout by.
+        game.timeoutReduction = 10000;
 
         return game;
     }())

@@ -2,6 +2,10 @@
 
 "use strict";
 
+const include = {
+    fs: require("fs")
+};
+
 const logger = (function () {
     const levelEnum = {
         ERROR:      0,
@@ -13,7 +17,7 @@ const logger = (function () {
     let newLogger = {
         levelEnum: levelEnum,
 
-        level: levelEnum.INFO,
+        level: levelEnum.VERBOSE,
 
         setLevel: function (level) {
             newLogger.level = level;
@@ -27,8 +31,8 @@ const logger = (function () {
             console.error(...message);
         },
 
-        logToFile: function (message) {
-            return message;
+        logToFile: function () {
+
         },
 
         logDebug: function (...message) {
@@ -58,6 +62,15 @@ const logger = (function () {
             newLogger.logToFile(...message);
         }
     };
+
+    newLogger.logFileIsEnabled = true;
+    newLogger.logToFileStream = include.fs.createWriteStream("log.txt", {flags: "a"});
+    newLogger.logToFile = function (message) {
+        if (true === newLogger.logFileIsEnabled) {
+            newLogger.logToFileStream.write(message + "\n");
+        }
+    };
+
     return newLogger;
 }());
 
