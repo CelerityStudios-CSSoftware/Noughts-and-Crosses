@@ -65,7 +65,7 @@ const logger = (function () {
 
     newLogger.logFileIsEnabled = true;
     newLogger.logToFileStream = include.fs.createWriteStream("log.txt", {flags: "a"});
-    newLogger.logToFile = function (...message) {
+    newLogger.logToFile = function (message) {
         if (true === newLogger.logFileIsEnabled) {
             newLogger.logToFileStream.write(message.join("") + "\n");
         }

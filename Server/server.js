@@ -82,26 +82,56 @@ const controller = (function () {
         newGame.turnsPassed = 0;
         newGame.playerTurnTimeout = {};
         newGame.disconnectedPlayerIds = [];
+
+        newGame.getBoardString = function (board) {
+            if ("undefined" === typeof board) {
+                board = newGame.gameBoard;
+            }
+            let boardString = "";
+            let maxY = board.length - 1;
+            let maxX = board[0].length - 1;
+
+            let y = maxY;
+            while (y >= 0) {
+                let x = 0;
+                while (x <= maxX) {
+                    if (board[y][x] >= 0) {
+                        boardString += " ";
+                    }
+                    boardString += board[y][x];
+                    if (x !== maxX) {
+                        boardString += ", ";
+                    }
+                    x += 1;
+                }
+                if (y > 0) {
+                    boardString += "\n";
+                }
+                y -= 1;
+            }
+            return boardString;
+        };
+
         newGame.gameBoard = (function () {
             let gameBoard = [];
 
-            let r = 0;
-            let c = 0;
+            let x = 0;
+            let y = 0;
             // Build the game board.
-            while (r <= config.game.boardMaxRowColIndexes[0]) {
+            while (x <= config.game.boardMaxRowColIndexes[1]) {
                 // Add row to game board.
                 gameBoard.push([]);
 
                 // Add columns to row.
-                while (c <= config.game.boardMaxRowColIndexes[1]) {
-                    gameBoard[r].push(-1);
-                    c += 1;
+                while (y <= config.game.boardMaxRowColIndexes[0]) {
+                    gameBoard[x].push(-1);
+                    y += 1;
                 }
-                c = 0;
-                r += 1;
+                y = 0;
+                x += 1;
             }
 
-            logger.logDebug("[Debug]\nGame board created...\n" + gameBoard);
+            logger.logDebug("[Debug]\nGame board created...\n" + newGame.getBoardString(gameBoard));
             return gameBoard;
         }());
 
@@ -119,7 +149,7 @@ const controller = (function () {
             logger.logDebug("[Debug]\nGame started.");
         };
 
-        newGame.validateMove = function (moveRow, moveCol) {
+        newGame.validateMove = function (moveCol, moveRow) {
             // Parse packet data as an int.
             moveRow = parseInt(moveRow, 10);
             moveCol = parseInt(moveCol, 10);
@@ -144,13 +174,13 @@ const controller = (function () {
             return false;
         };
 
-        newGame.applyPlayerMove = function (moveRow, moveCol) {
+        newGame.applyPlayerMove = function (moveCol, moveRow) {
             // Assign board slot to player.
             newGame.gameBoard[moveRow][moveCol] = newGame.playerTurn;
             // Inform players of user's move.
-            newGame.socketWriteAll(config.socket.codes.playerMoved, moveRow, moveCol);
+            newGame.socketWriteAll(config.socket.codes.playerMoved, moveCol, moveRow);
 
-            logger.logDebug("[Debug]\nGame board changed...\n" + newGame.gameBoard);
+            logger.logDebug("[Debug]\nGame board changed...\n" + newGame.getBoardString());
         };
 
         newGame.checkIfPlayerCanWin = function () {
@@ -159,7 +189,7 @@ const controller = (function () {
             return (newGame.turnsPassed >= config.game.turnsNeededToWin);
         };
 
-        newGame.checkIfPlayerWon = function (moveRow, moveCol) {
+        newGame.checkIfPlayerWon = function (moveCol, moveRow) {
             let r;
             let c;
 
