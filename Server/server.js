@@ -14,6 +14,8 @@ const include = {
 const config = require("./config");
 
 const logger = require("./logger");
+const Board = require("./board");
+const Referee = require("./referee");
 
 // Main application logic.
 const controller = (function () {
@@ -83,57 +85,12 @@ const controller = (function () {
         newGame.playerTurnTimeout = {};
         newGame.disconnectedPlayerIds = [];
 
-        newGame.getBoardString = function (board) {
-            if ("undefined" === typeof board) {
-                board = newGame.gameBoard;
-            }
-            let boardString = "";
-            let maxY = board.length - 1;
-            let maxX = board[0].length - 1;
-
-            let y = maxY;
-            while (y >= 0) {
-                let x = 0;
-                while (x <= maxX) {
-                    if (board[y][x] >= 0) {
-                        boardString += " ";
-                    }
-                    boardString += board[y][x];
-                    if (x !== maxX) {
-                        boardString += ", ";
-                    }
-                    x += 1;
-                }
-                if (y > 0) {
-                    boardString += "\n";
-                }
-                y -= 1;
-            }
-            return boardString;
-        };
-
-        newGame.gameBoard = (function () {
-            let gameBoard = [];
-
-            let x = 0;
-            let y = 0;
-            // Build the game board.
-            while (x <= config.game.boardMaxRowColIndexes[1]) {
-                // Add row to game board.
-                gameBoard.push([]);
-
-                // Add columns to row.
-                while (y <= config.game.boardMaxRowColIndexes[0]) {
-                    gameBoard[x].push(-1);
-                    y += 1;
-                }
-                y = 0;
-                x += 1;
-            }
-
-            logger.logDebug("[Debug]\nGame board created...\n" + newGame.getBoardString(gameBoard));
-            return gameBoard;
-        }());
+        const boardDimensions = config.game.boardMaxRowColIndexes;
+        newGame.gameBoard = new Board(boardDimensions[1] + 1, boardDimensions[0] + 1);
+        logger.logDebug("[Debug]\nGame board created...");
+        logger.logDebug("size: " + newGame.gameBoard.width + "x" + newGame.gameBoard.height);
+        logger.logDebug("slots:\n" + newGame.gameBoard.toString());
+        newGame.referee = new Referee().watchGame(newGame);
 
         newGame.startGame = function () {
             newGame.playerSockets.forEach(function (socket, index) {
@@ -146,7 +103,7 @@ const controller = (function () {
             newGame.socketWriteAll(config.socket.codes.playerTurn, newGame.playerTurn);
             newGame.startTurnTimeout();
 
-            logger.logDebug("[Debug]\nGame started.");
+            logger.log("[Info]\nGame started.");
         };
 
         newGame.validateMove = function (moveCol, moveRow) {
@@ -156,205 +113,200 @@ const controller = (function () {
 
             // Check if packet data is an int.
             if (true === Number.isInteger(moveRow) && true === Number.isInteger(moveCol)) {
-                // Check if player's row move is within board bounds.
-                if (moveRow >= 0 && moveRow <= config.game.boardMaxRowColIndexes[0]) {
-                    // Check if player's column move is within board bounds.
-                    if (moveCol >= 0 && moveCol <= config.game.boardMaxRowColIndexes[1]) {
-                        // Check if board slot is already taken.
-                        if (newGame.gameBoard[moveRow][moveCol] === -1) {
-                            return true;
-                        }
-                    }
+                if (newGame.referee.isMoveValid(moveCol, moveRow)) {
+                    return true;
                 }
             }
 
             // Inform player his move was invalid and to try again.
             newGame.socketWrite(newGame.playerSockets[newGame.playerTurn], config.socket.codes.playerTurn, newGame.playerTurn);
-            logger.logDebug("[Debug]\nInvalid move...\n" + "R:" + moveRow + "C:" + moveCol);
+            logger.logWarning("[Warning]\nInvalid move...\n" + "x:" + moveCol + " y:" + moveRow);
             return false;
         };
 
         newGame.applyPlayerMove = function (moveCol, moveRow) {
             // Assign board slot to player.
-            newGame.gameBoard[moveRow][moveCol] = newGame.playerTurn;
+            newGame.gameBoard.setSlot(moveCol, moveRow, newGame.playerTurn);
             // Inform players of user's move.
             newGame.socketWriteAll(config.socket.codes.playerMoved, moveCol, moveRow);
 
-            logger.logDebug("[Debug]\nGame board changed...\n" + newGame.getBoardString());
+            logger.logDebug("[Debug]\nGame board changed...\n" + newGame.gameBoard.toString());
         };
 
         newGame.checkIfPlayerCanWin = function () {
             // Check if enough turns have passed to win.
-            newGame.turnsPassed += 1;
             return (newGame.turnsPassed >= config.game.turnsNeededToWin);
         };
 
-        newGame.checkIfPlayerWon = function (moveCol, moveRow) {
-            let r;
-            let c;
+        newGame.checkIfPlayerWon = newGame.referee.isWinningMove;
 
-            let slotsInARow = 1;
-            if (moveRow > 0) {
-                r = moveRow;
-
-                while (r > 0) {
-                    r -= 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[r][moveCol]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            if (moveRow < config.game.boardMaxRowColIndexes[0]) {
-                r = moveRow;
-
-                while (r < config.game.boardMaxRowColIndexes[0]) {
-                    r += 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[r][moveCol]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            slotsInARow = 1;
-            if (moveCol > 0) {
-                c = moveCol;
-
-                while (c > 0) {
-                    c -= 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[moveRow][c]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            if (moveCol < config.game.boardMaxRowColIndexes[1]) {
-                c = moveCol;
-
-                while (c < config.game.boardMaxRowColIndexes[1]) {
-                    c += 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[moveRow][c]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            slotsInARow = 1;
-            if (moveRow > 0 && moveCol < config.game.boardMaxRowColIndexes[1]) {
-                r = moveRow;
-                c = moveCol;
-
-                while (r > 0 && c < config.game.boardMaxRowColIndexes[1]) {
-                    r -= 1;
-                    c += 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[r][c]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            if (moveCol > 0 && moveRow < config.game.boardMaxRowColIndexes[0]) {
-                r = moveRow;
-                c = moveCol;
-
-                while (c > 0 && r < config.game.boardMaxRowColIndexes[0]) {
-                    r += 1;
-                    c -= 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[r][c]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            slotsInARow = 1;
-            if (moveRow > 0 && moveCol > 0) {
-                r = moveRow;
-                c = moveCol;
-
-                while (r > 0 && c > 0) {
-                    r -= 1;
-                    c -= 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[r][c]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            if (moveRow < config.game.boardMaxRowColIndexes[0] && moveCol < config.game.boardMaxRowColIndexes[1]) {
-                r = moveRow;
-                c = moveCol;
-
-                while (r < config.game.boardMaxRowColIndexes[0] && c < config.game.boardMaxRowColIndexes[1]) {
-                    r += 1;
-                    c += 1;
-
-                    if (newGame.playerTurn === newGame.gameBoard[r][c]) {
-                        slotsInARow += 1;
-
-                        if (slotsInARow === config.game.slotsToWin) {
-                            return true;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-        };
+        // newGame.checkIfPlayerWon = function (moveCol, moveRow) {
+        //     let r;
+        //     let c;
+        //
+        //     let slotsInARow = 1;
+        //     if (moveRow > 0) {
+        //         r = moveRow;
+        //
+        //         while (r > 0) {
+        //             r -= 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[r][moveCol]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     if (moveRow < config.game.boardMaxRowColIndexes[0]) {
+        //         r = moveRow;
+        //
+        //         while (r < config.game.boardMaxRowColIndexes[0]) {
+        //             r += 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[r][moveCol]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     slotsInARow = 1;
+        //     if (moveCol > 0) {
+        //         c = moveCol;
+        //
+        //         while (c > 0) {
+        //             c -= 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[moveRow][c]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     if (moveCol < config.game.boardMaxRowColIndexes[1]) {
+        //         c = moveCol;
+        //
+        //         while (c < config.game.boardMaxRowColIndexes[1]) {
+        //             c += 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[moveRow][c]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     slotsInARow = 1;
+        //     if (moveRow > 0 && moveCol < config.game.boardMaxRowColIndexes[1]) {
+        //         r = moveRow;
+        //         c = moveCol;
+        //
+        //         while (r > 0 && c < config.game.boardMaxRowColIndexes[1]) {
+        //             r -= 1;
+        //             c += 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[r][c]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     if (moveCol > 0 && moveRow < config.game.boardMaxRowColIndexes[0]) {
+        //         r = moveRow;
+        //         c = moveCol;
+        //
+        //         while (c > 0 && r < config.game.boardMaxRowColIndexes[0]) {
+        //             r += 1;
+        //             c -= 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[r][c]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     slotsInARow = 1;
+        //     if (moveRow > 0 && moveCol > 0) {
+        //         r = moveRow;
+        //         c = moveCol;
+        //
+        //         while (r > 0 && c > 0) {
+        //             r -= 1;
+        //             c -= 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[r][c]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     if (moveRow < config.game.boardMaxRowColIndexes[0] && moveCol < config.game.boardMaxRowColIndexes[1]) {
+        //         r = moveRow;
+        //         c = moveCol;
+        //
+        //         while (r < config.game.boardMaxRowColIndexes[0] && c < config.game.boardMaxRowColIndexes[1]) {
+        //             r += 1;
+        //             c += 1;
+        //
+        //             if (newGame.playerTurn === newGame.gameBoard[r][c]) {
+        //                 slotsInARow += 1;
+        //
+        //                 if (slotsInARow === config.game.slotsToWin) {
+        //                     return true;
+        //                 }
+        //             } else {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // };
 
         newGame.nextTurn = function () {
             // Set next player's turn.
             newGame.playerTurn += 1;
             if (newGame.playerTurn >= config.game.playersPerGame) {
                 newGame.playerTurn = 0;
+                newGame.turnsPassed += 1;
             }
 
             // check if player is connected.
@@ -364,6 +316,7 @@ const controller = (function () {
                     newGame.playerTurn += 1;
                     if (newGame.playerTurn >= config.game.playersPerGame) {
                         newGame.playerTurn = 0;
+                        newGame.turnsPassed += 1;
                     }
 
                     // Check if next player is connected.
@@ -464,9 +417,9 @@ const controller = (function () {
                 }
 
                 newGame.applyPlayerMove(x, y);
-                if (true === newGame.checkIfPlayerCanWin()) {
+                if (true === newGame.referee.canAnyoneWinYet()) {
                     let endGameReason;
-                    if (true === newGame.checkIfPlayerWon(x, y)) {
+                    if (true === newGame.referee.isWinningMove(x, y)) {
                         endGameReason = config.socket.codes.playerWon;
                     } else if (newGame.turnsPassed === config.game.maxPossibleTurns) {
                         endGameReason = config.socket.codes.playerDraw;
