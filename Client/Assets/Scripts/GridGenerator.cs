@@ -9,7 +9,7 @@ public class GridGenerator : MonoBehaviour {
 	void Start () {
         for (uint x = 0; x < width; x++) {
             for (uint y = 0; y < height; y++) {
-                var tile = Instantiate(emptyGridTile, new Vector3(x, y, transform.position.z), Quaternion.identity, transform) as ClickableTile;
+                var tile = Instantiate(emptyGridTile, new Vector3(x, -y, transform.position.z), Quaternion.identity, transform) as ClickableTile;
                 var tileInfo = tile.gameObject.GetComponent<TileInfo>();
 
                 tileInfo.x = x;

@@ -8,6 +8,7 @@ public partial class Server : MonoBehaviour {
     public class MessageEvent : UnityEvent<string[]> { }
 
     public enum MessageType {
+        CONNECTION_ID,
         MATCHMAKING,
         START_GAME,
         TURN,

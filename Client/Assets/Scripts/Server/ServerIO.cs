@@ -9,6 +9,7 @@ public partial class Server : MonoBehaviour {
 
     //TODO add arg count checking to this class
     private Dictionary<string, MessageType> _messageTypeCodes = new Dictionary<string, MessageType>() {
+        { "cid", MessageType.CONNECTION_ID },
         { "f", MessageType.MATCHMAKING },
         { "s", MessageType.START_GAME },
         { "m", MessageType.MOVE },
