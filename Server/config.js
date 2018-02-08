@@ -30,6 +30,10 @@ const config = {
 
             // Used to reconnect player.
             connectionId: "cid",
+            // Used to join a new game.
+            joinNewGame: "jg",
+            // Used to reconnect to disconnected game.
+            reconnectToGame: "rc",
 
             // Signals start of game.
             startGame: "s",

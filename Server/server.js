@@ -312,6 +312,21 @@ const controller = (function () {
             },
 
             onConnection: function (socket) {
+                socket.on("data", function (data) {
+                    // Remove whitespace at the start and end of the data
+                    data = data.trim();
+                    // Parse package data into array.
+                    data = data.split(config.socket.codes.dataSeparator);
+
+                    if (data[0] === config.socket.codes.joinNewGame) {
+                        newController.events.handleConnection(socket);
+                    } else if (data[0] === config.socket.codes.reconnectToGame) {
+                        newController.events.handleReconnect(socket, data);
+                    }
+                });
+            },
+
+            handleConnection: function (socket) {
                 // Get the matchmaking game instance.
                 let newGameIndex = games.length - 1;
                 let newGame = games[newGameIndex];
@@ -357,12 +372,18 @@ const controller = (function () {
                     } else if (false === newGame.isMatchmaking) {
                         newGame.disconnectedPlayerIds[socket.info.id][0] = 1;
 
-                        // Inform players a user has disconnected.
-                        newGame.socketWriteAll(config.socket.codes.playerLeft, socket.info.id, 0);
+                        setTimeout(function () {
+                            if (newGame.disconnectedPlayerIds[socket.info.id][0] === 1) {
+                                // Inform players a user has disconnected.
+                                newGame.socketWriteAll(config.socket.codes.playerLeft, socket.info.id, 0);
 
-                        if (2 > newGame.playerSockets.length) {
-                            newGame.endGame();
-                        }
+                                if (2 > newGame.playerSockets.length) {
+                                    newGame.endGame();
+                                }
+                            } else {
+                                newGame.disconnectedPlayerIds[socket.info.id][0] = 0;
+                            }
+                        }, 4000);
                     }
                 });
 
@@ -381,6 +402,20 @@ const controller = (function () {
                     newGame.startGame();
                     // Add new game instance for matchmaking.
                     games.push(newController.createGame());
+                }
+            },
+
+            handleReconnect: function (socket, args) {
+                let dToken = games[args[0]].disconnectedPlayerIds[args[1]];
+
+                if (undefined !== dToken) {
+                    if (dToken[0] === 1) {
+                        if (dToken[1] === args[2]) {
+                            games[args[0]].disconnectedPlayerIds[args[1]][0] = 0;
+                            socket.info = games[args[0]].playerSockets[args[1]].info;
+                            games[args[0]].playerSockets[args[1]] = socket;
+                        }
+                    }
                 }
             }
         }
