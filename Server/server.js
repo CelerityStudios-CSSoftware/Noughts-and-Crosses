@@ -188,6 +188,7 @@ const controller = (function () {
             data = data.join(config.socket.codes.dataSeparator) + config.socket.codes.endLine;
             try {
                 socket.write(data);
+                console.log("Wrote '" + data.replace(/\n$/, "") + "' to client");
             } catch (ex) {
                 logger.logError(ex);
             }
@@ -200,13 +201,17 @@ const controller = (function () {
         };
 
         newGame.startTurnTimeout = function () {
-            newGame.playerTurnTimeout = setTimeout(newGame.events.game.turnTimedOut, config.game.turnTimeout);
+            let timeout = config.game.turnTimeout;
+            logger.logDebug("[Debug]\nSet timeout for player " + newGame.playerTurn + " to " + timeout);
+            newGame.playerTurnTimeout = setTimeout(newGame.events.game.turnTimedOut, timeout);
         };
 
         newGame.resetTurnTimeout = function () {
             // Reset player move timeout.
             clearTimeout(newGame.playerTurnTimeout);
-            newGame.playerTurnTimeout = setTimeout(newGame.events.game.turnTimedOut, (config.game.turnTimeout - (config.game.timeoutReduction * newGame.playerSockets[newGame.playerTurn].info.timeout)));
+            let timeout = config.game.turnTimeout - (config.game.timeoutReduction * newGame.playerSockets[newGame.playerTurn].info.timeout);
+            logger.logDebug("[Debug]\nReset timeout for player " + newGame.playerTurn + " to " + timeout);
+            newGame.playerTurnTimeout = setTimeout(newGame.events.game.turnTimedOut, timeout);
         };
 
         newGame.events = {
@@ -318,7 +323,8 @@ const controller = (function () {
 
                 // Give the player's socket an ID.
                 socket.info = {
-                    id: newGame.playerSockets.length
+                    id: newGame.playerSockets.length,
+                    timeout: 0
                 };
 
                 let cid = newController.generateId();
@@ -335,6 +341,7 @@ const controller = (function () {
                 socket.on("data", function (data) {
                     // Remove whitespace at the start and end of the data
                     data = data.trim();
+                    console.log("Received '" + data + "' from player " + socket.info.id);
                     // Parse package data into array.
                     data = data.split(config.socket.codes.dataSeparator);
                     newGame.messageHandlers.handleMessage(data[0], socket.info.id, data.splice(1));

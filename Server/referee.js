@@ -1,6 +1,7 @@
 /*jslint node*/
 
 const config = require("./config");
+const logger = require("./logger")
 
 class Referee {
     constructor() {
@@ -20,7 +21,8 @@ class Referee {
     }
 
     canAnyoneWinYet() {
-        return this.game.turnsPassed >= config.game.turnsNeededToWin;
+        logger.logDebug("[Debug]\nTurns: current " + (this.game.turnsPassed + 1) + " needed " + config.game.slotsToWin);
+        return this.game.turnsPassed + 1 >= config.game.slotsToWin;
     }
 
     isWinningMove(x, y) {
@@ -32,16 +34,19 @@ class Referee {
         ];
         const slotsToWin = config.game.slotsToWin;
         const currentPlayer = this.game.playerTurn;
+        const board = this.game.gameBoard;
+        logger.logDebug("[Debug]\nSlots to win: " + slotsToWin + " current player: " + currentPlayer);
         return paired_axes.some(function (axis) {
             let slotsInARow = 1;
             return axis.some(function (xStep, yStep) {
-                let it = this.game.gameBoard.getIterator(x, y, xStep, yStep);
+                let it = board.getIterator(x, y, xStep, yStep);
                 while (
                     it.next() !== it.end()
-                    && currentPlayer === this.game.gameBoard.getSlot(it.x, it.y)
+                    && currentPlayer === board.getSlot(it.x, it.y)
                 ) {
                     slotsInARow += 1;
                     if (slotsInARow === slotsToWin) {
+                        logger.logDebug("[Debug]\n Winning move!")
                         return true;
                     }
                 }

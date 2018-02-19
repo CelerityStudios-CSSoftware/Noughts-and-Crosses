@@ -1,13 +1,15 @@
 /*jslint node*/
 
+const logger = require('./logger');
+
 const defaultSlotValue = -1;
 
 class BoardIterator {
     constructor(x, y, xStep, yStep, board) {
-        this.x = x;
-        this.y = y;
-        this.xStep = xStep;
-        this.yStep = yStep;
+        this.x = parseInt(x);
+        this.y = parseInt(y);
+        this.xStep = parseInt(xStep);
+        this.yStep = parseInt(yStep);
         this.board = board;
     }
 
@@ -18,11 +20,13 @@ class BoardIterator {
     next() {
         let nX = this.x + this.xStep;
         let nY = this.y + this.yStep;
+        logger.logDebug("board size: " + this.board.width + "x" + this.board.height);
         if (this.board.isCoordInBounds(nX, nY)) {
             this.x = nX;
             this.y = nY;
             return this;
         }
+        logger.logDebug("" + nX + "/" + nY + " is not in bounds");
         return this.end();
     }
 }
