@@ -39,7 +39,7 @@ const logger = (function () {
             if (newLogger.level < newLogger.levelEnum.VERBOSE) {
                 return;
             }
-            newLogger.log(...message);
+            newLogger.log("[Debug] ", ...message);
         },
 
         log: function (...message) {
@@ -54,11 +54,11 @@ const logger = (function () {
             if (newLogger.level < newLogger.levelEnum.WARNING) {
                 return;
             }
-            newLogger.log(...message);
+            newLogger.log("[Warning] ", ...message);
         },
 
         logError: function (...message) {
-            newLogger.logToConsoleErr(...message);
+            newLogger.logToConsoleErr("[Error] ", ...message);
             newLogger.logToFile(...message);
         }
     };
