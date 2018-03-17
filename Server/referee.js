@@ -36,16 +36,18 @@ class Referee {
         const board = this.game.board;
         logger.logDebug("Slots to win: " + slotsToWin + " current player: " + playerId);
         return paired_axes.some(function (axis) {
+            let slotsCovered = [x.toString() + ":" + y.toString()];
             let slotsInARow = 1;
-            return axis.some(function (xStep, yStep) {
-                let it = board.getIterator(x, y, xStep, yStep);
+            return axis.some(function (steps) {
+                let it = board.getIterator(x, y, steps[0], steps[1]);
                 while (
                     it.next() !== it.end()
                     && playerId === board.getSlot(it.x, it.y)
                 ) {
+                    slotsCovered.push([it.x.toString() + ":" + it.y.toString()]);
                     slotsInARow += 1;
                     if (slotsInARow === slotsToWin) {
-                        logger.logDebug("Winning move!")
+                        logger.logDebug("Winning move!: " + slotsCovered.join(" ") + "steps: " + steps[0] + "," + steps[1]);
                         return true;
                     }
                 }

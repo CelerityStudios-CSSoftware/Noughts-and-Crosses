@@ -58,6 +58,7 @@ class Match {
             this.board.setSlot(x, y, player.id);
             this.broadcast("playerMove", x, y);
             this.checkForEndOfGame(player, x, y);
+            logger.logDebug("board state:\n" + this.board.toString());
             this.endTurn();
             this.startTurn();
         };
